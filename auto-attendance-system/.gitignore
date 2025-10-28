@@ -1,0 +1,31 @@
+# Environment variables
+.env
+
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Database
+data/
+
+# Build outputs
+dist/
+build/
+
+# Docker
+.docker/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp

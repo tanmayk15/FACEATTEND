@@ -1,0 +1,1533 @@
+import React, { useState, useEffect } from 'react';import React, { useState, useEffect } from 'react';import React, { useState, useEffect } from 'react';import React, { useState, useEffect } from 'react';import React, { useState, useEffect } from 'react';
+
+import { useAuth } from '../context/AuthContext';
+
+import { useNavigate } from 'react-router-dom';import { useAuth } from '../context/AuthContext';
+
+import axios from 'axios';
+
+import toast from 'react-hot-toast';import { useNavigate } from 'react-router-dom';import { useAuth } from '../context/AuthContext';
+
+import ClassManager from '../components/ClassManager';
+
+import SessionManager from '../components/SessionManager';import axios from 'axios';
+
+import AttendanceBoard from '../components/AttendanceBoard';
+
+import toast from 'react-hot-toast';import { useNavigate } from 'react-router-dom';import { useAuth } from '../context/AuthContext';import { useAuth } from '../context/AuthContext';
+
+const DashboardTeacher = () => {
+
+  const { user, logout } = useAuth();import ClassManager from '../components/ClassManager';
+
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState('overview');import SessionManager from '../components/SessionManager';import axios from 'axios';
+
+  const [stats, setStats] = useState({
+
+    totalClasses: 0,import AttendanceBoard from '../components/AttendanceBoard';
+
+    totalStudents: 0,
+
+    totalSessions: 0,import toast from 'react-hot-toast';import { useNavigate } from 'react-router-dom';import { useNavigate } from 'react-router-dom';
+
+    averageAttendance: 0
+
+  });const DashboardTeacher = () => {
+
+  const [loading, setLoading] = useState(true);
+
+  const { user, logout } = useAuth();import ClassManager from '../components/ClassManager';
+
+  const API_BASE = 'http://localhost:5001/api';
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+
+    fetchDashboardData();  const [activeTab, setActiveTab] = useState('overview');import SessionManager from '../components/SessionManager';import axios from 'axios';import axios from 'axios';
+
+  }, []);
+
+  const [stats, setStats] = useState({
+
+  const handleLogout = async () => {
+
+    await logout();    totalClasses: 0,import AttendanceBoard from '../components/AttendanceBoard';
+
+    navigate('/login');
+
+  };    totalStudents: 0,
+
+
+
+  const fetchDashboardData = async () => {    totalSessions: 0,import toast from 'react-hot-toast';import toast from 'react-hot-toast';
+
+    try {
+
+      const token = localStorage.getItem('token');    averageAttendance: 0
+
+      const config = {
+
+        headers: { Authorization: `Bearer ${token}` }  });const DashboardTeacher = () => {
+
+      };
+
+  const [loading, setLoading] = useState(true);
+
+      const classesResponse = await axios.get(`${API_BASE}/classes`, config);
+
+      const classes = classesResponse.data.success ? classesResponse.data.data : [];  const { user, logout } = useAuth();import ClassManager from '../components/ClassManager';import ClassManager from '../components/ClassManager';
+
+
+
+      setStats({  const API_BASE = 'http://localhost:5001/api';
+
+        totalClasses: classes.length,
+
+        totalStudents: classes.reduce((sum, cls) => sum + (cls.students?.length || 0), 0),  const navigate = useNavigate();
+
+        totalSessions: 0,
+
+        averageAttendance: 85  useEffect(() => {
+
+      });
+
+    fetchDashboardData();  const [activeTab, setActiveTab] = useState('overview');import SessionManager from '../components/SessionManager';import SessionManager from '../components/SessionManager';
+
+    } catch (error) {
+
+      console.error('Error fetching dashboard data:', error);  }, []);
+
+      toast.error('Failed to load dashboard data');
+
+    } finally {  const [stats, setStats] = useState({
+
+      setLoading(false);
+
+    }  const handleLogout = async () => {
+
+  };
+
+    await logout();    totalClasses: 0,import AttendanceBoard from '../components/AttendanceBoard';import AttendanceBoard from '../components/AttendanceBoard';
+
+  const StatCard = ({ title, value, icon, color = 'blue' }) => (
+
+    <div className="bg-white rounded-lg shadow-md p-6">    navigate('/login');
+
+      <div className="flex items-center justify-between">
+
+        <div>  };    totalStudents: 0,
+
+          <p className="text-sm font-medium text-gray-600">{title}</p>
+
+          <p className={`text-3xl font-bold text-${color}-600`}>{value}</p>
+
+        </div>
+
+        <div className="text-4xl">{icon}</div>  const fetchDashboardData = async () => {    totalSessions: 0,
+
+      </div>
+
+    </div>    try {
+
+  );
+
+      const token = localStorage.getItem('token');    averageAttendance: 0
+
+  const tabs = [
+
+    { id: 'overview', label: 'Overview', icon: '📊' },      const config = {
+
+    { id: 'classes', label: 'Classes', icon: '📚' },
+
+    { id: 'sessions', label: 'Sessions', icon: '🎯' },        headers: { Authorization: `Bearer ${token}` }  });/**/**
+
+    { id: 'attendance', label: 'Attendance', icon: '✅' }
+
+  ];      };
+
+
+
+  if (loading) {  const [loading, setLoading] = useState(true);
+
+    return (
+
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">      const classesResponse = await axios.get(`${API_BASE}/classes`, config);
+
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+
+      </div>      const classes = classesResponse.data.success ? classesResponse.data.data : []; * Enhanced Teacher Dashboard Component * Enhanced Teacher Dashboard Component
+
+    );
+
+  }
+
+
+
+  return (      setStats({  const API_BASE = 'http://localhost:5001/api';
+
+    <div className="min-h-screen bg-gray-100">
+
+      <header className="bg-white shadow-sm border-b">        totalClasses: classes.length,
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          <div className="flex justify-between items-center h-16">        totalStudents: classes.reduce((sum, cls) => sum + (cls.students?.length || 0), 0), * Complete dashboard with real data integration and component management * Complete dashboard with real data integration and component management
+
+            <div className="flex items-center">
+
+              <div className="text-2xl mr-3">🎓</div>        totalSessions: 0,
+
+              <div>
+
+                <h1 className="text-xl font-bold text-gray-900">Auto Attendance System</h1>        averageAttendance: 85  useEffect(() => {
+
+                <p className="text-sm text-gray-600">Teacher Dashboard</p>
+
+              </div>      });
+
+            </div>
+
+            <div className="flex items-center space-x-4">    fetchDashboardData(); */ */
+
+              <div className="text-sm">
+
+                <span className="font-medium text-gray-700">{user?.name}</span>    } catch (error) {
+
+                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+
+                  Teacher      console.error('Error fetching dashboard data:', error);  }, []);
+
+                </span>
+
+              </div>      toast.error('Failed to load dashboard data');
+
+              <button
+
+                onClick={handleLogout}    } finally {
+
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+
+              >      setLoading(false);
+
+                Logout
+
+              </button>    }  const handleLogout = async () => {
+
+            </div>
+
+          </div>  };
+
+        </div>
+
+      </header>    await logout();const DashboardTeacher = () => {const DashboardTeacher = () => {
+
+
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">  const StatCard = ({ title, value, icon, color = 'blue' }) => (
+
+        <nav className="flex space-x-1 mb-8">
+
+          {tabs.map((tab) => (    <div className="bg-white rounded-lg shadow-md p-6">    navigate('/login');
+
+            <button
+
+              key={tab.id}      <div className="flex items-center justify-between">
+
+              onClick={() => setActiveTab(tab.id)}
+
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-colors ${        <div>  };  const { user, logout } = useAuth();  const { user, logout } = useAuth();
+
+                activeTab === tab.id
+
+                  ? 'bg-blue-600 text-white'          <p className="text-sm font-medium text-gray-600">{title}</p>
+
+                  : 'bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
+
+              }`}          <p className={`text-3xl font-bold text-${color}-600`}>{value}</p>
+
+            >
+
+              <span>{tab.icon}</span>        </div>
+
+              <span>{tab.label}</span>
+
+            </button>        <div className="text-4xl">{icon}</div>  const fetchDashboardData = async () => {  const navigate = useNavigate();  const navigate = useNavigate();
+
+          ))}
+
+        </nav>      </div>
+
+
+
+        {activeTab === 'overview' && (    </div>    try {
+
+          <div className="space-y-8">
+
+            <div className="bg-white rounded-lg shadow-md p-6">  );
+
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+
+                Welcome back, {user?.name}! 👋      const token = localStorage.getItem('token');  const [activeTab, setActiveTab] = useState('overview');  const [activeTab, setActiveTab] = useState('overview');
+
+              </h2>
+
+              <p className="text-gray-600">  const tabs = [
+
+                Here's an overview of your teaching dashboard.
+
+              </p>    { id: 'overview', label: 'Overview', icon: '📊' },      const config = {
+
+            </div>
+
+    { id: 'classes', label: 'Classes', icon: '📚' },
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+              <StatCard    { id: 'sessions', label: 'Sessions', icon: '🎯' },        headers: { Authorization: `Bearer ${token}` }  const [stats, setStats] = useState({  const [stats, setStats] = useState({
+
+                title="Total Classes"
+
+                value={stats.totalClasses}    { id: 'attendance', label: 'Attendance', icon: '✅' }
+
+                icon="📚"
+
+                color="blue"  ];      };
+
+              />
+
+              <StatCard
+
+                title="Total Students"
+
+                value={stats.totalStudents}  if (loading) {    totalClasses: 0,    totalClasses: 0,
+
+                icon="👥"
+
+                color="green"    return (
+
+              />
+
+              <StatCard      <div className="min-h-screen bg-gray-100 flex items-center justify-center">      const classesResponse = await axios.get(`${API_BASE}/classes`, config);
+
+                title="Total Sessions"
+
+                value={stats.totalSessions}        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+
+                icon="🎯"
+
+                color="purple"      </div>      const classes = classesResponse.data.success ? classesResponse.data.data : [];    totalStudents: 0,    totalStudents: 0,
+
+              />
+
+              <StatCard    );
+
+                title="Avg. Attendance"
+
+                value={`${stats.averageAttendance}%`}  }
+
+                icon="📈"
+
+                color="orange"
+
+              />
+
+            </div>  return (      setStats({    totalSessions: 0,    totalSessions: 0,
+
+
+
+            <div className="bg-white rounded-lg shadow-md p-6">    <div className="min-h-screen bg-gray-100">
+
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">      <header className="bg-white shadow-sm border-b">        totalClasses: classes.length,
+
+                <button
+
+                  onClick={() => setActiveTab('classes')}        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
+
+                >          <div className="flex justify-between items-center h-16">        totalStudents: classes.reduce((sum, cls) => sum + (cls.students?.length || 0), 0),    averageAttendance: 0    averageAttendance: 0
+
+                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">📚</div>            <div className="flex items-center">
+
+                    <p className="font-medium">Manage Classes</p>
+
+                    <p className="text-sm text-gray-600">Create or edit classes</p>              <div className="text-2xl mr-3">🎓</div>        totalSessions: 0,
+
+                  </div>
+
+                </button>              <div>
+
+                
+
+                <button                <h1 className="text-xl font-bold text-gray-900">Auto Attendance System</h1>        averageAttendance: 85  });  });
+
+                  onClick={() => setActiveTab('sessions')}
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors"                <p className="text-sm text-gray-600">Teacher Dashboard</p>
+
+                >
+
+                  <div className="text-center">              </div>      });
+
+                    <div className="text-3xl mb-2">🎯</div>
+
+                    <p className="font-medium">Create Session</p>            </div>
+
+                    <p className="text-sm text-gray-600">Start a new session</p>
+
+                  </div>            <div className="flex items-center space-x-4">  const [recentActivity, setRecentActivity] = useState([]);  const [recentActivity, setRecentActivity] = useState([]);
+
+                </button>
+
+                              <div className="text-sm">
+
+                <button
+
+                  onClick={() => setActiveTab('attendance')}                <span className="font-medium text-gray-700">{user?.name}</span>    } catch (error) {
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors"
+
+                >                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+
+                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">✅</div>                  Teacher      console.error('Error fetching dashboard data:', error);  const [loading, setLoading] = useState(true);  const [loading, setLoading] = useState(true);
+
+                    <p className="font-medium">View Attendance</p>
+
+                    <p className="text-sm text-gray-600">Check attendance records</p>                </span>
+
+                  </div>
+
+                </button>              </div>      toast.error('Failed to load dashboard data');
+
+              </div>
+
+            </div>              <button
+
+
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">                onClick={handleLogout}    } finally {
+
+              <h4 className="text-sm font-medium text-green-800 mb-2">🎉 Frontend Phase Complete!</h4>
+
+              <p className="text-sm text-green-700">                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+
+                All major UI components are now functional with real backend integration.
+
+              </p>              >      setLoading(false);
+
+            </div>
+
+          </div>                Logout
+
+        )}
+
+              </button>    }  const API_BASE = 'http://localhost:5001/api';  const API_BASE = 'http://localhost:5001/api';
+
+        {activeTab === 'classes' && <ClassManager />}
+
+        {activeTab === 'sessions' && <SessionManager />}            </div>
+
+        {activeTab === 'attendance' && <AttendanceBoard />}
+
+      </div>          </div>  };
+
+    </div>
+
+  );        </div>
+
+};
+
+      </header>
+
+export default DashboardTeacher;
+
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">  const StatCard = ({ title, value, icon, color = 'blue' }) => (
+
+        <nav className="flex space-x-1 mb-8">
+
+          {tabs.map((tab) => (    <div className="bg-white rounded-lg shadow-md p-6">  useEffect(() => {  useEffect(() => {
+
+            <button
+
+              key={tab.id}      <div className="flex items-center justify-between">
+
+              onClick={() => setActiveTab(tab.id)}
+
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-colors ${        <div>    fetchDashboardData();    fetchDashboardData();
+
+                activeTab === tab.id
+
+                  ? 'bg-blue-600 text-white'          <p className="text-sm font-medium text-gray-600">{title}</p>
+
+                  : 'bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
+
+              }`}          <p className={`text-3xl font-bold text-${color}-600`}>{value}</p>  }, []);  }, []);
+
+            >
+
+              <span>{tab.icon}</span>        </div>
+
+              <span>{tab.label}</span>
+
+            </button>        <div className="text-4xl">{icon}</div>
+
+          ))}
+
+        </nav>      </div>
+
+
+
+        {activeTab === 'overview' && (    </div>  const handleLogout = async () => {  const handleLogout = async () => {
+
+          <div className="space-y-8">
+
+            <div className="bg-white rounded-lg shadow-md p-6">  );
+
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+
+                Welcome back, {user?.name}! 👋    await logout();    await logout();
+
+              </h2>
+
+              <p className="text-gray-600">  const tabs = [
+
+                Here's an overview of your teaching dashboard with real-time data.
+
+              </p>    { id: 'overview', label: 'Overview', icon: '📊' },    navigate('/login');    navigate('/login');
+
+            </div>
+
+    { id: 'classes', label: 'Classes', icon: '📚' },
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+              <StatCard    { id: 'sessions', label: 'Sessions', icon: '🎯' },  };  };
+
+                title="Total Classes"
+
+                value={stats.totalClasses}    { id: 'attendance', label: 'Attendance', icon: '✅' }
+
+                icon="📚"
+
+                color="blue"  ];
+
+              />
+
+              <StatCard
+
+                title="Total Students"
+
+                value={stats.totalStudents}  if (loading) {  const fetchDashboardData = async () => {  const fetchDashboardData = async () => {
+
+                icon="👥"
+
+                color="green"    return (
+
+              />
+
+              <StatCard      <div className="min-h-screen bg-gray-100 flex items-center justify-center">    try {    try {
+
+                title="Total Sessions"
+
+                value={stats.totalSessions}        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+
+                icon="🎯"
+
+                color="purple"      </div>      const token = localStorage.getItem('token');      const token = localStorage.getItem('token');
+
+              />
+
+              <StatCard    );
+
+                title="Avg. Attendance"
+
+                value={`${stats.averageAttendance}%`}  }      const config = {      const config = {
+
+                icon="📈"
+
+                color="orange"
+
+              />
+
+            </div>  return (        headers: { Authorization: `Bearer ${token}` }        headers: { Authorization: `Bearer ${token}` }
+
+
+
+            <div className="bg-white rounded-lg shadow-md p-6">    <div className="min-h-screen bg-gray-100">
+
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">      {/* Header */}      };      };
+
+                <button
+
+                  onClick={() => setActiveTab('classes')}      <header className="bg-white shadow-sm border-b">
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
+
+                >        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">📚</div>          <div className="flex justify-between items-center h-16">
+
+                    <p className="font-medium">Manage Classes</p>
+
+                    <p className="text-sm text-gray-600">Create or edit classes</p>            <div className="flex items-center">      // Fetch classes      // Fetch classes
+
+                  </div>
+
+                </button>              <div className="text-2xl mr-3">🎓</div>
+
+                
+
+                <button              <div>      const classesResponse = await axios.get(`${API_BASE}/classes`, config);      const classesResponse = await axios.get(`${API_BASE}/classes`, config);
+
+                  onClick={() => setActiveTab('sessions')}
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors"                <h1 className="text-xl font-bold text-gray-900">Auto Attendance System</h1>
+
+                >
+
+                  <div className="text-center">                <p className="text-sm text-gray-600">Teacher Dashboard</p>      const classes = classesResponse.data.success ? classesResponse.data.data : [];      const classes = classesResponse.data.success ? classesResponse.data.data : [];
+
+                    <div className="text-3xl mb-2">🎯</div>
+
+                    <p className="font-medium">Create Session</p>              </div>
+
+                    <p className="text-sm text-gray-600">Start a new session</p>
+
+                  </div>            </div>
+
+                </button>
+
+                            <div className="flex items-center space-x-4">
+
+                <button
+
+                  onClick={() => setActiveTab('attendance')}              <div className="text-sm">      // Calculate total students across all classes      // Calculate total students across all classes
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors"
+
+                >                <span className="font-medium text-gray-700">{user?.name}</span>
+
+                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">✅</div>                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">      const totalStudents = classes.reduce((sum, cls) => sum + (cls.students?.length || 0), 0);      const totalStudents = classes.reduce((sum, cls) => sum + (cls.students?.length || 0), 0);
+
+                    <p className="font-medium">View Attendance</p>
+
+                    <p className="text-sm text-gray-600">Check attendance records</p>                  Teacher
+
+                  </div>
+
+                </button>                </span>
+
+              </div>
+
+            </div>              </div>
+
+
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">              <button      // Fetch sessions for all classes      // Fetch sessions for all classes
+
+              <h4 className="text-sm font-medium text-green-800 mb-2">🎉 Frontend Phase Complete!</h4>
+
+              <p className="text-sm text-green-700">                onClick={handleLogout}
+
+                All major UI components are now functional with real backend integration. 
+
+                Ready for AI service integration in Phase 4!                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"      let allSessions = [];      let allSessions = [];
+
+              </p>
+
+            </div>              >
+
+          </div>
+
+        )}                Logout      for (const cls of classes) {      for (const cls of classes) {
+
+
+
+        {activeTab === 'classes' && <ClassManager />}              </button>
+
+        {activeTab === 'sessions' && <SessionManager />}
+
+        {activeTab === 'attendance' && <AttendanceBoard />}            </div>        try {        try {
+
+      </div>
+
+    </div>          </div>
+
+  );
+
+};        </div>          const sessionsResponse = await axios.get(`${API_BASE}/sessions/class/${cls._id}`, config);          const sessionsResponse = await axios.get(`${API_BASE}/sessions/class/${cls._id}`, config);
+
+
+
+export default DashboardTeacher;      </header>
+
+          if (sessionsResponse.data.success) {          if (sessionsResponse.data.success) {
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Navigation Tabs */}            allSessions.push(...sessionsResponse.data.data.map(session => ({            allSessions.push(...sessionsResponse.data.data.map(session => ({
+
+        <nav className="flex space-x-1 mb-8">
+
+          {tabs.map((tab) => (              ...session,              ...session,
+
+            <button
+
+              key={tab.id}              className: cls.name              className: cls.name
+
+              onClick={() => setActiveTab(tab.id)}
+
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-colors ${            })));            })));
+
+                activeTab === tab.id
+
+                  ? 'bg-blue-600 text-white'          }          }
+
+                  : 'bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
+
+              }`}        } catch (error) {        } catch (error) {
+
+            >
+
+              <span>{tab.icon}</span>          console.error(`Error fetching sessions for class ${cls.name}:`, error);          console.error(`Error fetching sessions for class ${cls.name}:`, error);
+
+              <span>{tab.label}</span>
+
+            </button>        }        }
+
+          ))}
+
+        </nav>      }      }
+
+
+
+        {/* Tab Content */}
+
+        {activeTab === 'overview' && (
+
+          <div className="space-y-8">      // Calculate attendance statistics      // Calculate attendance statistics
+
+            {/* Welcome Message */}
+
+            <div className="bg-white rounded-lg shadow-md p-6">      let totalAttendanceRecords = 0;      let totalAttendanceRecords = 0;
+
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+
+                Welcome back, {user?.name}! 👋      let presentRecords = 0;      let presentRecords = 0;
+
+              </h2>
+
+              <p className="text-gray-600">
+
+                Here's an overview of your teaching dashboard with real-time data.
+
+              </p>      for (const session of allSessions.slice(0, 10)) { // Limit to recent 10 sessions for performance      for (const session of allSessions.slice(0, 10)) { // Limit to recent 10 sessions for performance
+
+            </div>
+
+        try {        try {
+
+            {/* Stats Grid */}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">          const attendanceResponse = await axios.get(`${API_BASE}/attendance/session/${session._id}`, config);          const attendanceResponse = await axios.get(`${API_BASE}/attendance/session/${session._id}`, config);
+
+              <StatCard
+
+                title="Total Classes"          if (attendanceResponse.data.success) {          if (attendanceResponse.data.success) {
+
+                value={stats.totalClasses}
+
+                icon="📚"            const records = attendanceResponse.data.data;            const records = attendanceResponse.data.data;
+
+                color="blue"
+
+              />            totalAttendanceRecords += records.length;            totalAttendanceRecords += records.length;
+
+              <StatCard
+
+                title="Total Students"            presentRecords += records.filter(r => r.status === 'present').length;            presentRecords += records.filter(r => r.status === 'present').length;
+
+                value={stats.totalStudents}
+
+                icon="👥"          }          }
+
+                color="green"
+
+              />        } catch (error) {        } catch (error) {
+
+              <StatCard
+
+                title="Total Sessions"          console.error(`Error fetching attendance for session ${session.title}:`, error);          console.error(`Error fetching attendance for session ${session.title}:`, error);
+
+                value={stats.totalSessions}
+
+                icon="🎯"        }        }
+
+                color="purple"
+
+              />      }      }
+
+              <StatCard
+
+                title="Avg. Attendance"
+
+                value={`${stats.averageAttendance}%`}
+
+                icon="📈"      const averageAttendance = totalAttendanceRecords > 0       const averageAttendance = totalAttendanceRecords > 0 
+
+                color="orange"
+
+              />        ? Math.round((presentRecords / totalAttendanceRecords) * 100)         ? Math.round((presentRecords / totalAttendanceRecords) * 100) 
+
+            </div>
+
+        : 0;        : 0;
+
+            {/* Quick Actions */}
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">      setStats({      setStats({
+
+                <button
+
+                  onClick={() => setActiveTab('classes')}        totalClasses: classes.length,        totalClasses: classes.length,
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
+
+                >        totalStudents,        totalStudents,
+
+                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">📚</div>        totalSessions: allSessions.length,        totalSessions: allSessions.length,
+
+                    <p className="font-medium">Manage Classes</p>
+
+                    <p className="text-sm text-gray-600">Create or edit classes</p>        averageAttendance        averageAttendance
+
+                  </div>
+
+                </button>      });      });
+
+                
+
+                <button
+
+                  onClick={() => setActiveTab('sessions')}
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors"      // Set recent activity (last 5 sessions)      // Set recent activity (last 5 sessions)
+
+                >
+
+                  <div className="text-center">      const recentSessions = allSessions      const recentSessions = allSessions
+
+                    <div className="text-3xl mb-2">🎯</div>
+
+                    <p className="font-medium">Create Session</p>        .sort((a, b) => new Date(b.date) - new Date(a.date))        .sort((a, b) => new Date(b.date) - new Date(a.date))
+
+                    <p className="text-sm text-gray-600">Start a new session</p>
+
+                  </div>        .slice(0, 5)        .slice(0, 5)
+
+                </button>
+
+                        .map(session => ({        .map(session => ({
+
+                <button
+
+                  onClick={() => setActiveTab('attendance')}          id: session._id,          id: session._id,
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors"
+
+                >          title: session.title,          title: session.title,
+
+                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">✅</div>          className: session.className,          className: session.className,
+
+                    <p className="font-medium">View Attendance</p>
+
+                    <p className="text-sm text-gray-600">Check attendance records</p>          date: session.date,          date: session.date,
+
+                  </div>
+
+                </button>          type: 'session'          type: 'session'
+
+              </div>
+
+            </div>        }));        }));
+
+
+
+            {/* Phase Status */}
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+
+              <h4 className="text-sm font-medium text-green-800 mb-2">🎉 Frontend Phase Complete!</h4>      setRecentActivity(recentSessions);      setRecentActivity(recentSessions);
+
+              <p className="text-sm text-green-700">
+
+                All major UI components are now functional with real backend integration. 
+
+                Ready for AI service integration in Phase 4!
+
+              </p>    } catch (error) {    } catch (error) {
+
+            </div>
+
+          </div>      console.error('Error fetching dashboard data:', error);      console.error('Error fetching dashboard data:', error);
+
+        )}
+
+      toast.error('Failed to load dashboard data');      toast.error('Failed to load dashboard data');
+
+        {activeTab === 'classes' && <ClassManager />}
+
+        {activeTab === 'sessions' && <SessionManager />}    } finally {    } finally {
+
+        {activeTab === 'attendance' && <AttendanceBoard />}
+
+      </div>      setLoading(false);      setLoading(false);
+
+    </div>
+
+  );    }    }
+
+};
+
+  };  };
+
+export default DashboardTeacher;
+
+
+  const StatCard = ({ title, value, icon, color = 'blue' }) => (  const StatCard = ({ title, value, icon, color = 'blue' }) => (
+
+    <div className="bg-white rounded-lg shadow-md p-6">    <div className="bg-white rounded-lg shadow-md p-6">
+
+      <div className="flex items-center justify-between">      <div className="flex items-center justify-between">
+
+        <div>        <div>
+
+          <p className="text-sm font-medium text-gray-600">{title}</p>          <p className="text-sm font-medium text-gray-600">{title}</p>
+
+          <p className={`text-3xl font-bold text-${color}-600`}>{value}</p>          <p className={`text-3xl font-bold text-${color}-600`}>{value}</p>
+
+        </div>        </div>
+
+        <div className={`text-${color}-600 text-4xl`}>        <div className={`text-${color}-600 text-4xl`}>
+
+          {icon}          {icon}
+
+        </div>        </div>
+
+      </div>      </div>
+
+    </div>    </div>
+
+  );  );
+
+
+
+  const tabs = [  const tabs = [
+
+    { id: 'overview', label: 'Overview', icon: '📊' },    { id: 'overview', label: 'Overview', icon: '📊' },
+
+    { id: 'classes', label: 'Classes', icon: '📚' },    { id: 'classes', label: 'Classes', icon: '📚' },
+
+    { id: 'sessions', label: 'Sessions', icon: '🎯' },    { id: 'sessions', label: 'Sessions', icon: '🎯' },
+
+    { id: 'attendance', label: 'Attendance', icon: '✅' }    { id: 'attendance', label: 'Attendance', icon: '✅' }
+
+  ];  ];
+
+
+
+  if (loading) {  if (loading) {
+
+    return (    return (
+
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+
+      </div>      </div>
+
+    );    );
+
+  }  }
+
+
+
+  return (  return (
+
+    <div className="min-h-screen bg-gray-100">    <div className="min-h-screen bg-gray-100">
+
+      {/* Header */}      {/* Header */}
+
+      <header className="bg-white shadow-sm border-b">      <header className="bg-white shadow-sm border-b">
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          <div className="flex justify-between items-center h-16">          <div className="flex justify-between items-center h-16">
+
+            <div className="flex items-center">            <div className="flex items-center">
+
+              <div className="text-2xl mr-3">🎓</div>              <div className="text-2xl mr-3">🎓</div>
+
+              <div>              <div>
+
+                <h1 className="text-xl font-bold text-gray-900">Auto Attendance System</h1>                <h1 className="text-xl font-bold text-gray-900">Auto Attendance System</h1>
+
+                <p className="text-sm text-gray-600">Teacher Dashboard</p>                <p className="text-sm text-gray-600">Teacher Dashboard</p>
+
+              </div>              </div>
+
+            </div>            </div>
+
+            <div className="flex items-center space-x-4">            <div className="flex items-center space-x-4">
+
+              <div className="text-sm">              <div className="text-sm">
+
+                <span className="font-medium text-gray-700">{user?.name}</span>                <span className="font-medium text-gray-700">{user?.name}</span>
+
+                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+
+                  Teacher                  Teacher
+
+                </span>                </span>
+
+              </div>              </div>
+
+              <button              <button
+
+                onClick={handleLogout}                onClick={handleLogout}
+
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+
+              >              >
+
+                Logout                Logout
+
+              </button>              </button>
+
+            </div>            </div>
+
+          </div>          </div>
+
+        </div>        </div>
+
+      </header>      </header>
+
+
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Navigation Tabs */}        {/* Navigation Tabs */}
+
+        <nav className="flex space-x-1 mb-8">        <nav className="flex space-x-1 mb-8">
+
+          {tabs.map((tab) => (          {tabs.map((tab) => (
+
+            <button            <button
+
+              key={tab.id}              key={tab.id}
+
+              onClick={() => setActiveTab(tab.id)}              onClick={() => setActiveTab(tab.id)}
+
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-colors ${              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-colors ${
+
+                activeTab === tab.id                activeTab === tab.id
+
+                  ? 'bg-blue-600 text-white'                  ? 'bg-blue-600 text-white'
+
+                  : 'bg-white text-gray-700 hover:bg-gray-50 shadow-sm'                  : 'bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
+
+              }`}              }`}
+
+            >            >
+
+              <span>{tab.icon}</span>              <span>{tab.icon}</span>
+
+              <span>{tab.label}</span>              <span>{tab.label}</span>
+
+            </button>            </button>
+
+          ))}          ))}
+
+        </nav>        </nav>
+
+
+
+        {/* Tab Content */}        {/* Tab Content */}
+
+        {activeTab === 'overview' && (        {activeTab === 'overview' && (
+
+          <div className="space-y-8">          <div className="space-y-8">
+
+            {/* Welcome Message */}            {/* Welcome Message */}
+
+            <div className="bg-white rounded-lg shadow-md p-6">            <div className="bg-white rounded-lg shadow-md p-6">
+
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+
+                Welcome back, {user?.name}! 👋                Welcome back, {user?.name}! 👋
+
+              </h2>              </h2>
+
+              <p className="text-gray-600">              <p className="text-gray-600">
+
+                Here's an overview of your teaching dashboard with real-time data.                Here's an overview of your teaching dashboard with real-time data.
+
+              </p>              </p>
+
+            </div>            </div>
+
+
+
+            {/* Stats Grid */}            {/* Stats Grid */}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+              <StatCard              <StatCard
+
+                title="Total Classes"                title="Total Classes"
+
+                value={stats.totalClasses}                value={stats.totalClasses}
+
+                icon="📚"                icon="📚"
+
+                color="blue"                color="blue"
+
+              />              />
+
+              <StatCard              <StatCard
+
+                title="Total Students"                title="Total Students"
+
+                value={stats.totalStudents}                value={stats.totalStudents}
+
+                icon="👥"                icon="👥"
+
+                color="green"                color="green"
+
+              />              />
+
+              <StatCard              <StatCard
+
+                title="Total Sessions"                title="Total Sessions"
+
+                value={stats.totalSessions}                value={stats.totalSessions}
+
+                icon="🎯"                icon="🎯"
+
+                color="purple"                color="purple"
+
+              />              />
+
+              <StatCard              <StatCard
+
+                title="Avg. Attendance"                title="Avg. Attendance"
+
+                value={`${stats.averageAttendance}%`}                value={`${stats.averageAttendance}%`}
+
+                icon="📈"                icon="📈"
+
+                color="orange"                color="orange"
+
+              />              />
+
+            </div>            </div>
+
+
+
+            {/* Recent Activity */}            {/* Recent Activity */}
+
+            <div className="bg-white rounded-lg shadow-md p-6">            <div className="bg-white rounded-lg shadow-md p-6">
+
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Sessions</h3>              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Sessions</h3>
+
+              {recentActivity.length === 0 ? (              {recentActivity.length === 0 ? (
+
+                <p className="text-gray-500">No recent sessions found</p>                <p className="text-gray-500">No recent sessions found</p>
+
+              ) : (              ) : (
+
+                <div className="space-y-3">                <div className="space-y-3">
+
+                  {recentActivity.map((activity) => (                  {recentActivity.map((activity) => (
+
+                    <div key={activity.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">                    <div key={activity.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+
+                      <div>                      <div>
+
+                        <p className="font-medium text-gray-900">{activity.title}</p>                        <p className="font-medium text-gray-900">{activity.title}</p>
+
+                        <p className="text-sm text-gray-600">{activity.className}</p>                        <p className="text-sm text-gray-600">{activity.className}</p>
+
+                      </div>                      </div>
+
+                      <p className="text-sm text-gray-500">                      <p className="text-sm text-gray-500">
+
+                        {new Date(activity.date).toLocaleDateString()}                        {new Date(activity.date).toLocaleDateString()}
+
+                      </p>                      </p>
+
+                    </div>                    </div>
+
+                  ))}                  ))}
+
+                </div>                </div>
+
+              )}              )}
+
+            </div>            </div>
+
+
+
+            {/* Quick Actions */}            {/* Quick Actions */}
+
+            <div className="bg-white rounded-lg shadow-md p-6">            <div className="bg-white rounded-lg shadow-md p-6">
+
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <button                <button
+
+                  onClick={() => setActiveTab('classes')}                  onClick={() => setActiveTab('classes')}
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
+
+                >                >
+
+                  <div className="text-center">                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">📚</div>                    <div className="text-3xl mb-2">📚</div>
+
+                    <p className="font-medium">Manage Classes</p>                    <p className="font-medium">Manage Classes</p>
+
+                    <p className="text-sm text-gray-600">Create or edit classes</p>                    <p className="text-sm text-gray-600">Create or edit classes</p>
+
+                  </div>                  </div>
+
+                </button>                </button>
+
+                                
+
+                <button                <button
+
+                  onClick={() => setActiveTab('sessions')}                  onClick={() => setActiveTab('sessions')}
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors"                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors"
+
+                >                >
+
+                  <div className="text-center">                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">🎯</div>                    <div className="text-3xl mb-2">🎯</div>
+
+                    <p className="font-medium">Create Session</p>                    <p className="font-medium">Create Session</p>
+
+                    <p className="text-sm text-gray-600">Start a new session</p>                    <p className="text-sm text-gray-600">Start a new session</p>
+
+                  </div>                  </div>
+
+                </button>                </button>
+
+                                
+
+                <button                <button
+
+                  onClick={() => setActiveTab('attendance')}                  onClick={() => setActiveTab('attendance')}
+
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors"                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors"
+
+                >                >
+
+                  <div className="text-center">                  <div className="text-center">
+
+                    <div className="text-3xl mb-2">✅</div>                    <div className="text-3xl mb-2">✅</div>
+
+                    <p className="font-medium">View Attendance</p>                    <p className="font-medium">View Attendance</p>
+
+                    <p className="text-sm text-gray-600">Check attendance records</p>                    <p className="text-sm text-gray-600">Check attendance records</p>
+
+                  </div>                  </div>
+
+                </button>                </button>
+
+              </div>              </div>
+
+            </div>            </div>
+
+
+
+            {/* Phase Status */}            {/* Phase Status */}
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+
+              <h4 className="text-sm font-medium text-green-800 mb-2">🎉 Frontend Phase Complete!</h4>              <h4 className="text-sm font-medium text-green-800 mb-2">🎉 Frontend Phase Complete!</h4>
+
+              <p className="text-sm text-green-700">              <p className="text-sm text-green-700">
+
+                All major UI components are now functional with real backend integration.                 All major UI components are now functional with real backend integration. 
+
+                Ready for AI service integration in Phase 4!                Ready for AI service integration in Phase 4!
+
+              </p>              </p>
+
+            </div>            </div>
+
+          </div>          </div>
+
+        )}        )}
+
+
+
+        {activeTab === 'classes' && <ClassManager />}        {activeTab === 'classes' && <ClassManager />}
+
+        {activeTab === 'sessions' && <SessionManager />}        {activeTab === 'sessions' && <SessionManager />}
+
+        {activeTab === 'attendance' && <AttendanceBoard />}        {activeTab === 'attendance' && <AttendanceBoard />}
+
+      </div>      </div>
+
+    </div>    </div>
+
+  );  );
+
+};};
+
+
+
+export default DashboardTeacher;export default DashboardTeacher;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Header */}
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <div className="text-2xl">🎓</div>
+              <div className="ml-4">
+                <h1 className="text-xl font-semibold text-gray-900">
+                  Auto Attendance System
+                </h1>
+                <p className="text-sm text-gray-500">Teacher Dashboard</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-700">
+                <span className="font-medium">{user?.name}</span>
+                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  Teacher
+                </span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 text-white px-4 py-2 rounded-md text-sm hover:bg-red-600 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Welcome Section */}
+        <div className="px-4 py-6 sm:px-0">
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Welcome back, {user?.name}! 👋
+              </h2>
+              <p className="text-gray-600 mb-6">
+                You're logged in as a teacher. Here's your dashboard overview.
+              </p>
+              
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">12</div>
+                  <div className="text-sm text-blue-800">Active Classes</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">245</div>
+                  <div className="text-sm text-green-800">Total Students</div>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">15</div>
+                  <div className="text-sm text-yellow-800">Today's Sessions</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">92%</div>
+                  <div className="text-sm text-purple-800">Avg Attendance</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Cards */}
+        <div className="px-4 py-6 sm:px-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Class Management */}
+            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="flex items-center">
+                  <div className="text-3xl mb-4">📚</div>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Class Management</h3>
+                <p className="text-gray-600 mb-4">
+                  Create and manage your classes, add students, and organize your courses.
+                </p>
+                <button className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors">
+                  Manage Classes
+                </button>
+              </div>
+            </div>
+
+            {/* Attendance Tracking */}
+            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="text-3xl mb-4">📊</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Attendance Tracking</h3>
+                <p className="text-gray-600 mb-4">
+                  View attendance reports, track student participation, and export data.
+                </p>
+                <button className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition-colors">
+                  View Reports
+                </button>
+              </div>
+            </div>
+
+            {/* Face Recognition Setup */}
+            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="text-3xl mb-4">🤖</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">AI Face Recognition</h3>
+                <p className="text-gray-600 mb-4">
+                  Set up automated attendance using AI-powered face recognition technology.
+                </p>
+                <button className="w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 transition-colors">
+                  Setup AI (Phase 4)
+                </button>
+              </div>
+            </div>
+
+            {/* Student Enrollment */}
+            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="text-3xl mb-4">👥</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Student Enrollment</h3>
+                <p className="text-gray-600 mb-4">
+                  Enroll new students, manage existing ones, and organize class rosters.
+                </p>
+                <button className="w-full bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition-colors">
+                  Manage Students
+                </button>
+              </div>
+            </div>
+
+            {/* Session Management */}
+            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="text-3xl mb-4">⏰</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Session Management</h3>
+                <p className="text-gray-600 mb-4">
+                  Create attendance sessions, set schedules, and manage class timing.
+                </p>
+                <button className="w-full bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 transition-colors">
+                  Create Session
+                </button>
+              </div>
+            </div>
+
+            {/* Settings */}
+            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="text-3xl mb-4">⚙️</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Settings</h3>
+                <p className="text-gray-600 mb-4">
+                  Configure system preferences, notification settings, and account details.
+                </p>
+                <button className="w-full bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition-colors">
+                  Open Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="px-4 py-6 sm:px-0">
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                Recent Activity
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    Attendance session completed for CS101 - Database Systems
+                  </span>
+                  <span className="text-xs text-gray-400">2 hours ago</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    New student enrolled in MATH201 - Advanced Calculus
+                  </span>
+                  <span className="text-xs text-gray-400">4 hours ago</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    Attendance report generated for Week 8
+                  </span>
+                  <span className="text-xs text-gray-400">1 day ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Phase Status */}
+        <div className="px-4 py-6 sm:px-0">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-blue-800 mb-2">🚀 Phase 2 Complete!</h4>
+            <p className="text-sm text-blue-700">
+              Authentication and authorization system is now active. 
+              Ready for Phase 3: Core Business Logic implementation.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default DashboardTeacher;

@@ -1,0 +1,39 @@
+{
+  "name": "auto-attendance-backend",
+  "version": "1.0.0",
+  "description": "Backend service for Auto Attendance System - Phase 3",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "dev-simple": "nodemon src/server-simple.js",
+    "seed": "node src/scripts/seedUsers.js",
+    "seed-phase3": "node src/scripts/seedPhase3Data.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "attendance",
+    "backend",
+    "express",
+    "mongodb"
+  ],
+  "author": "Auto Attendance Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "bcrypt": "^5.1.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "form-data": "^4.0.4",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.5.0",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

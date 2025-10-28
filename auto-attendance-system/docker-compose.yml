@@ -1,0 +1,103 @@
+# Auto Attendance System - Phase 1
+# Docker Compose configuration for multi-service setup
+
+version: '3.8'
+
+services:
+  # Backend Service (Node.js + Express + MongoDB)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: auto-attendance-backend
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - BACKEND_PORT=5001
+      - NODE_ENV=development
+      - MONGO_URI=${MONGO_URI}
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - auto-attendance-network
+    restart: unless-stopped
+    depends_on:
+      - ai_service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Frontend Service (React + Vite + Tailwind)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: auto-attendance-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5001
+      - VITE_AI_SERVICE_URL=http://localhost:8000
+    env_file:
+      - ./frontend/.env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - auto-attendance-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # AI Service (Python + FastAPI)
+  ai_service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: auto-attendance-ai
+    ports:
+      - "8000:8000"
+    environment:
+      - AI_SERVICE_PORT=8000
+      - ENVIRONMENT=development
+    env_file:
+      - ./ai_service/.env
+    volumes:
+      - ./ai_service:/app
+    networks:
+      - auto-attendance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Networks
+networks:
+  auto-attendance-network:
+    driver: bridge
+    name: auto-attendance-network
+
+# Volumes (for future use in Phase 3-4)
+volumes:
+  mongodb_data:
+    driver: local
+  ai_models:
+    driver: local
+  uploaded_images:
+    driver: local

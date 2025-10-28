@@ -1,0 +1,195 @@
+# FaceAttend - Auto Attendance System
+# Comprehensive .gitignore for MERN + FastAPI project
+
+# ========================
+# Environment Variables
+# ========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.example
+
+# ========================
+# Node.js Dependencies
+# ========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ========================
+# Python Dependencies
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# ========================
+# IDE and Editor Files
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ========================
+# Build and Distribution
+# ========================
+/build
+/dist
+*.tgz
+*.tar.gz
+
+# ========================
+# Logs
+# ========================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm
+.eslintcache
+*.log
+
+# ========================
+# Runtime Data
+# ========================
+pids
+*.pid
+*.seed
+*.pid.lock
+.grunt
+lib-cov
+coverage/
+.nyc_output
+.coverage
+.pytest_cache/
+htmlcov/
+
+# ========================
+# Uploads and Media
+# ========================
+uploads/
+static/uploads/
+static/enrollments/
+temp/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+!**/static/demo-images/*
+
+# ========================
+# Database
+# ========================
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================
+# Security and Certificates
+# ========================
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# ========================
+# AI Models and Large Files
+# ========================
+*.pkl
+*.model
+*.h5
+*.pb
+*.onnx
+*.weights
+models/
+checkpoints/
+
+# ========================
+# Cache and Temporary Files
+# ========================
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+
+# ========================
+# OS Generated Files
+# ========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ========================
+# Docker
+# ========================
+Dockerfile.prod
+docker-compose.override.yml
+.dockerignore
+
+# ========================
+# Testing
+# ========================
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+playwright-report/
+
+# ========================
+# Miscellaneous
+# ========================
+*.local
+.history/
+.temp/
+.tmp/
+backup/
