@@ -329,24 +329,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 👥 **Team**
-
-- **Lead Developer**: [Your Name]
-- **AI/ML Engineer**: [Team Member]
-- **Frontend Developer**: [Team Member]
-- **Backend Developer**: [Team Member]
-
----
-
-## 📞 **Support**
-
-- **Documentation**: [Wiki](https://github.com/yourusername/FACEATTEND/wiki)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/FACEATTEND/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/FACEATTEND/discussions)
-- **Email**: faceattend.support@yourdomain.com
-
----
-
 ## 🌟 **Show Your Support**
 
 Give a ⭐️ if this project helped you!
