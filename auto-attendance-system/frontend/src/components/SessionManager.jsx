@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { formatDate, formatDateTime } from '../utils/dateTimeFormat';
 
 const SessionManager = ({ classId }) => {
   const [sessions, setSessions] = useState([]);
@@ -37,7 +38,7 @@ const SessionManager = ({ classId }) => {
 
   const checkAIServiceStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await axios.get(`${API_BASE}/sessions/ai-service/health`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -53,7 +54,7 @@ const SessionManager = ({ classId }) => {
 
   const fetchClasses = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await axios.get(`${API_BASE}/classes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -75,7 +76,7 @@ const SessionManager = ({ classId }) => {
     
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await axios.get(`${API_BASE}/sessions/class/${classId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -95,7 +96,7 @@ const SessionManager = ({ classId }) => {
     e.preventDefault();
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const sessionData = {
         ...formData,
         classId: selectedClass
@@ -134,7 +135,7 @@ const SessionManager = ({ classId }) => {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const formDataUpload = new FormData();
       formDataUpload.append('photo', uploadData.photo); // Fixed: changed back to 'photo' to match backend
 
@@ -221,10 +222,6 @@ const SessionManager = ({ classId }) => {
   const openUploadModal = (session) => {
     setSelectedSession(session);
     setShowUploadModal(true);
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
   };
 
   const getStatusBadge = (status) => {

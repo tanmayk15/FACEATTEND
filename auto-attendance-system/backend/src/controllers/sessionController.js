@@ -18,13 +18,13 @@ const FormData = require('form-data');
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 /**
- * Call AI service to analyze photo for faces
+ * Call AI service to detect faces in photo (simple detection only)
  * @param {string} filePath - Path to the uploaded photo
  * @returns {Object} AI analysis results
  */
-const analyzePhotoWithAI = async (filePath) => {
+const detectFacesWithAI = async (filePath) => {
   try {
-    console.log(`🤖 Sending photo to AI service: ${filePath}`);
+    console.log(`🤖 Sending photo to AI service for face detection: ${filePath}`);
     
     // Create form data for multipart upload
     const formData = new FormData();
@@ -34,8 +34,8 @@ const analyzePhotoWithAI = async (filePath) => {
       contentType: 'image/jpeg'
     });
 
-    // Make request to AI service
-    const response = await axios.post(`${AI_SERVICE_URL}/analyze`, formData, {
+    // Make request to AI service - using detect-faces endpoint
+    const response = await axios.post(`${AI_SERVICE_URL}/detect-faces`, formData, {
       headers: {
         ...formData.getHeaders(),
         'Content-Type': 'multipart/form-data'
@@ -43,7 +43,7 @@ const analyzePhotoWithAI = async (filePath) => {
       timeout: 30000 // 30 second timeout
     });
 
-    console.log(`✅ AI service response: ${response.data.facesDetected} faces detected`);
+    console.log(`✅ AI service response: ${response.data.facesDetected || response.data.faces_detected || 0} faces detected`);
     return {
       success: true,
       data: response.data
@@ -108,7 +108,7 @@ const createSession = async (req, res) => {
       });
     }
 
-    if (classDoc.teacher.toString() !== req.user.id) {
+    if (classDoc.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only create sessions for your own classes'
@@ -151,7 +151,7 @@ const createSession = async (req, res) => {
       session: savedSession._id,
       status: 'Absent',
       method: 'manual',
-      markedBy: req.user.id
+      markedBy: req.user.userId
     }));
 
     const createdAttendance = await Attendance.insertMany(attendanceRecords);
@@ -205,9 +205,9 @@ const getClassSessions = async (req, res) => {
       });
     }
 
-    const isTeacher = req.user.role === 'teacher' && classDoc.teacher.toString() === req.user.id;
+    const isTeacher = req.user.role === 'teacher' && classDoc.teacher.toString() === req.user.userId;
     const isEnrolledStudent = req.user.role === 'student' && 
-      classDoc.students.includes(req.user.id);
+      classDoc.students.includes(req.user.userId);
 
     if (!isTeacher && !isEnrolledStudent) {
       return res.status(403).json({
@@ -236,7 +236,7 @@ const getClassSessions = async (req, res) => {
     if (req.user.role === 'student') {
       options.populate.push({
         path: 'attendance',
-        match: { student: req.user.id },
+        match: { student: req.user.userId },
         select: 'status markedAt method confidenceScore'
       });
     } else {
@@ -324,9 +324,9 @@ const getSessionById = async (req, res) => {
 
     // Check user access
     const isTeacher = req.user.role === 'teacher' && 
-      session.class.teacher.toString() === req.user.id;
+      session.class.teacher.toString() === req.user.userId;
     const isEnrolledStudent = req.user.role === 'student' && 
-      session.class.students.includes(req.user.id);
+      session.class.students.includes(req.user.userId);
 
     if (!isTeacher && !isEnrolledStudent) {
       return res.status(403).json({
@@ -341,7 +341,7 @@ const getSessionById = async (req, res) => {
     if (req.user.role === 'student') {
       // Students only see their own attendance
       sessionData.attendance = sessionData.attendance.filter(
-        a => a.student._id.toString() === req.user.id
+        a => a.student._id.toString() === req.user.userId
       );
     }
 
@@ -400,7 +400,7 @@ const updateSessionStatus = async (req, res) => {
     }
 
     // Verify teacher owns this session
-    if (session.class.teacher.toString() !== req.user.id) {
+    if (session.class.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only update your own sessions'
@@ -426,6 +426,168 @@ const updateSessionStatus = async (req, res) => {
   }
 };
 
+/**
+ * Helper function to perform automatic attendance marking
+ * @param {Object} session - Populated session with class and students
+ * @param {string} photoPath - Path to uploaded photo file
+ * @returns {Object} Results of automatic attendance
+ */
+const performAutomaticAttendance = async (session, photoPath, threshold = 0.6) => {
+  try {
+    // Students should already be populated from uploadSessionPhoto
+    // Filter students with registered faces
+    console.log(`🔍 Total students in class: ${session.class.students.length}`);
+    
+    // Debug: Log each student's face data status
+    session.class.students.forEach(s => {
+      console.log(`📝 Student: ${s.name}`);
+      console.log(`   - Email: ${s.email}`);
+      console.log(`   - Student ID: ${s.studentId || 'N/A'}`);
+      console.log(`   - Has faceData object: ${!!s.faceData}`);
+      console.log(`   - Has faceEmbedding: ${!!s.faceData?.faceEmbedding}`);
+      console.log(`   - Embedding length: ${s.faceData?.faceEmbedding?.length || 0}`);
+      console.log(`   - Embedding sample:`, s.faceData?.faceEmbedding?.slice(0, 3));
+    });
+    
+    const studentsWithFaces = session.class.students.filter(
+      student => student.faceData?.faceEmbedding && student.faceData.faceEmbedding.length === 128
+    );
+
+    console.log(`✅ Students with registered faces: ${studentsWithFaces.length}`);
+    studentsWithFaces.forEach(s => {
+      console.log(`   - ${s.name} (${s.studentId}): embedding length = ${s.faceData?.faceEmbedding?.length || 0}`);
+    });
+
+    if (studentsWithFaces.length === 0) {
+      console.log('⚠️ No students have registered faces - skipping automatic attendance');
+      return {
+        studentsMarkedPresent: 0,
+        recognitionResults: [],
+        totalEnrolled: session.class.students.length,
+        error: 'No students with registered faces'
+      };
+    }
+
+    console.log(`📊 Comparing ${studentsWithFaces.length} registered students with photo`);
+
+    // Prepare form data for AI service
+    const formData = new FormData();
+    const fileStream = await fs.readFile(photoPath);
+    formData.append('file', fileStream, {
+      filename: path.basename(photoPath),
+      contentType: 'image/jpeg'
+    });
+
+    // Prepare reference data
+    const referenceEmbeddings = studentsWithFaces.map(s => s.faceData.faceEmbedding);
+    const studentIds = studentsWithFaces.map(s => s._id.toString());
+
+    const requestData = {
+      referenceEmbeddings,
+      studentIds,
+      threshold
+    };
+
+    formData.append('request_data', JSON.stringify(requestData));
+
+    console.log('📡 Calling AI service /compare endpoint...');
+
+    // Call AI service
+    const aiResponse = await axios.post(`${AI_SERVICE_URL}/compare`, formData, {
+      headers: {
+        ...formData.getHeaders()
+      },
+      timeout: 60000
+    });
+
+    const analysisResult = aiResponse.data;
+    console.log(`✅ Face comparison complete: ${analysisResult.totalMatches || 0} matches found`);
+    console.log(`📋 AI Response:`, JSON.stringify(analysisResult, null, 2));
+
+    const recognitionResults = [];
+    let studentsMarkedPresent = 0;
+
+    // Mark matched students as Present
+    if (analysisResult.matches && analysisResult.matches.length > 0) {
+      console.log(`🎯 Processing ${analysisResult.matches.length} matched faces...`);
+      for (const match of analysisResult.matches) {
+        try {
+          console.log(`   ⚡ Processing match: studentId=${match.studentId}, confidence=${match.confidence}`);
+          // Find or create attendance record
+          let attendanceRecord = await Attendance.findOne({
+            session: session._id,
+            student: match.studentId
+          });
+
+          const student = studentsWithFaces.find(s => s._id.toString() === match.studentId);
+          console.log(`   📝 Student found: ${student ? student.name : 'NOT FOUND'}`);
+
+          if (!attendanceRecord) {
+            // Create new attendance record
+            attendanceRecord = new Attendance({
+              student: match.studentId,
+              session: session._id,
+              status: 'Present',
+              markedAt: new Date(),
+              method: 'ai_recognition',
+              markedBy: session.class.teacher,
+              confidenceScore: match.confidence
+            });
+            await attendanceRecord.save();
+            studentsMarkedPresent++;
+
+            recognitionResults.push({
+              studentId: match.studentId,
+              studentName: student ? student.name : 'Unknown',
+              studentIdNumber: student ? student.studentId : 'N/A',
+              confidence: match.confidence,
+              status: 'Present',
+              action: 'created'
+            });
+          } else {
+            // Update existing attendance record
+            // AI detection updates status from initial 'Absent' to 'Present'
+            const previousStatus = attendanceRecord.status;
+            const previousMethod = attendanceRecord.method;
+            
+            attendanceRecord.status = 'Present';
+            attendanceRecord.method = 'ai_recognition';
+            attendanceRecord.markedAt = new Date();
+            attendanceRecord.confidenceScore = match.confidence;
+            await attendanceRecord.save();
+            studentsMarkedPresent++;
+
+            recognitionResults.push({
+              studentId: match.studentId,
+              studentName: student ? student.name : 'Unknown',
+              studentIdNumber: student ? student.studentId : 'N/A',
+              confidence: match.confidence,
+              status: 'Present',
+              action: 'updated',
+              previousStatus,
+              previousMethod
+            });
+          }
+        } catch (error) {
+          console.error(`Error marking attendance for student ${match.studentId}:`, error.message);
+        }
+      }
+    }
+
+    return {
+      studentsMarkedPresent,
+      recognitionResults,
+      totalEnrolled: session.class.students.length,
+      totalWithFaces: studentsWithFaces.length,
+      facesDetectedInPhoto: analysisResult.facesDetected || 0
+    };
+
+  } catch (error) {
+    console.error('Automatic attendance error:', error);
+    throw error;
+  }
+};
+
 // @desc    Upload photo for session and analyze with AI
 // @route   POST /api/sessions/:id/photo
 // @access  Private (Teacher only)
@@ -438,7 +600,15 @@ const uploadSessionPhoto = async (req, res) => {
       });
     }
 
-    const session = await Session.findById(req.params.id).populate('class');
+    const session = await Session.findById(req.params.id)
+      .populate({
+        path: 'class',
+        populate: {
+          path: 'students',
+          select: 'name email studentId faceData'
+        }
+      });
+    
     if (!session) {
       return res.status(404).json({
         success: false,
@@ -447,7 +617,7 @@ const uploadSessionPhoto = async (req, res) => {
     }
 
     // Verify teacher owns this session
-    if (session.class.teacher.toString() !== req.user.id) {
+    if (session.class.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only upload photos for your own sessions'
@@ -472,25 +642,26 @@ const uploadSessionPhoto = async (req, res) => {
 
     // Analyze photo with AI service
     console.log(`🔍 Analyzing photo with AI service...`);
-    const aiAnalysis = await analyzePhotoWithAI(req.file.path);
+    const aiAnalysis = await detectFacesWithAI(req.file.path);
     
     if (aiAnalysis.success) {
       // Store AI analysis results in session
+      const facesDetected = aiAnalysis.data.facesDetected || aiAnalysis.data.faces_detected || 0;
       session.aiAnalysis = {
-        facesDetected: aiAnalysis.data.facesDetected,
-        embeddings: aiAnalysis.data.embeddings,
-        faceLocations: aiAnalysis.data.faceLocations,
+        facesDetected: facesDetected,
+        embeddings: aiAnalysis.data.embeddings || [],
+        faceLocations: aiAnalysis.data.faceLocations || aiAnalysis.data.face_locations || [],
         processedAt: new Date(),
-        aiServiceVersion: aiAnalysis.data.version,
-        message: aiAnalysis.data.message
+        aiServiceVersion: aiAnalysis.data.version || '4.0.0',
+        message: aiAnalysis.data.message || 'Face detection complete'
       };
       
-      console.log(`✅ AI Analysis complete: ${aiAnalysis.data.facesDetected} faces detected`);
+      console.log(`✅ AI Analysis complete: ${facesDetected} faces detected`);
     } else {
       // Store error information but don't fail the upload
       session.aiAnalysis = {
         error: aiAnalysis.error,
-        details: aiAnalysis.details,
+        details: typeof aiAnalysis.details === 'string' ? aiAnalysis.details : JSON.stringify(aiAnalysis.details),
         processedAt: new Date(),
         facesDetected: 0
       };
@@ -500,10 +671,27 @@ const uploadSessionPhoto = async (req, res) => {
 
     await session.save();
 
+    // **AUTOMATICALLY MARK ATTENDANCE** after photo upload
+    let attendanceResults = null;
+    if (aiAnalysis.success && aiAnalysis.data.facesDetected > 0) {
+      console.log(`🎯 Automatically marking attendance for detected faces...`);
+      console.log(`📊 Session ID: ${session._id}, Class ID: ${session.class._id || session.class}`);
+      try {
+        attendanceResults = await performAutomaticAttendance(session, req.file.path);
+        console.log(`✅ Automatic attendance completed: ${attendanceResults.studentsMarkedPresent} students marked present`);
+        console.log(`📋 Recognition results:`, JSON.stringify(attendanceResults.recognitionResults, null, 2));
+      } catch (attendanceError) {
+        console.error(`⚠️ Automatic attendance failed:`, attendanceError.message);
+        console.error(`⚠️ Error stack:`, attendanceError.stack);
+      }
+    } else {
+      console.log(`⚠️ Skipping automatic attendance - faces detected: ${aiAnalysis.data?.facesDetected || 0}`);
+    }
+
     // Prepare response
     const response = {
       success: true,
-      message: 'Photo uploaded successfully',
+      message: 'Photo uploaded and attendance marked successfully',
       data: {
         photoURL: session.photoURL,
         metadata: session.photoMetadata,
@@ -511,13 +699,20 @@ const uploadSessionPhoto = async (req, res) => {
           facesDetected: session.aiAnalysis.facesDetected || 0,
           processedSuccessfully: aiAnalysis.success,
           message: session.aiAnalysis.message || session.aiAnalysis.error
-        }
+        },
+        attendanceResults: attendanceResults ? {
+          studentsMarkedPresent: attendanceResults.studentsMarkedPresent,
+          studentsRecognized: attendanceResults.recognitionResults,
+          totalEnrolled: attendanceResults.totalEnrolled
+        } : null
       }
     };
 
     // Add warning if AI service failed
     if (!aiAnalysis.success) {
       response.warning = 'Photo uploaded but AI analysis failed. Manual attendance marking is still available.';
+    } else if (!attendanceResults) {
+      response.warning = 'Photo uploaded but automatic attendance could not be processed.';
     }
 
     res.json(response);
@@ -553,7 +748,7 @@ const deleteSession = async (req, res) => {
     }
 
     // Verify teacher owns this session
-    if (session.class.teacher.toString() !== req.user.id) {
+    if (session.class.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only delete your own sessions'
@@ -703,7 +898,7 @@ const testAIServiceDebug = async (req, res) => {
 const analyzeAndMarkAttendance = async (req, res) => {
   try {
     const { id: sessionId } = req.params;
-    const { threshold = 0.7, markAbsentAfterAnalysis = false } = req.body;
+    const { threshold = 0.6, markAbsentAfterAnalysis = true } = req.body;
 
     // Find session and verify permissions
     const session = await Session.findById(sessionId)
@@ -722,7 +917,7 @@ const analyzeAndMarkAttendance = async (req, res) => {
       });
     }
 
-    if (session.class.teacher.toString() !== req.user.id) {
+    if (session.class.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only analyze sessions from your own classes'
@@ -738,6 +933,21 @@ const analyzeAndMarkAttendance = async (req, res) => {
 
     console.log(`🤖 Starting automatic attendance analysis for session: ${session.title}`);
 
+    // Prepare reference embeddings from enrolled students
+    const studentsWithFaces = session.class.students.filter(
+      student => student.faceData?.faceEmbedding && student.faceData.faceEmbedding.length === 128
+    );
+
+    if (studentsWithFaces.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No students with registered faces found in this class',
+        hint: 'Students need to register their faces during signup'
+      });
+    }
+
+    console.log(`📊 Found ${studentsWithFaces.length} students with registered faces`);
+
     // Prepare photo file path
     const photoPath = session.photoURL.startsWith('/') ? 
       session.photoURL.substring(1) : session.photoURL;
@@ -745,7 +955,7 @@ const analyzeAndMarkAttendance = async (req, res) => {
 
     // Check if photo file exists
     try {
-      await fs.access(fullPhotoPath, fs.constants.F_OK);
+      await fs.access(fullPhotoPath);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -754,7 +964,7 @@ const analyzeAndMarkAttendance = async (req, res) => {
       });
     }
 
-    // Analyze photo with AI service for classroom recognition
+    // Call AI service /compare endpoint
     try {
       const formData = new FormData();
       const fileStream = await fs.readFile(fullPhotoPath);
@@ -762,115 +972,123 @@ const analyzeAndMarkAttendance = async (req, res) => {
         filename: path.basename(fullPhotoPath),
         contentType: 'image/jpeg'
       });
-      formData.append('class_id', session.class._id.toString());
-      formData.append('session_id', sessionId);
-      formData.append('threshold', threshold.toString());
 
-      console.log('📡 Sending classroom photo to AI service for analysis...');
+      // Prepare reference data
+      const referenceEmbeddings = studentsWithFaces.map(s => s.faceData.faceEmbedding);
+      const studentIds = studentsWithFaces.map(s => s._id.toString());
 
-      const aiResponse = await axios.post(`${AI_SERVICE_URL}/analyze`, formData, {
+      const requestData = {
+        referenceEmbeddings,
+        studentIds,
+        threshold
+      };
+
+      formData.append('request_data', JSON.stringify(requestData));
+
+      console.log('📡 Sending classroom photo to AI service for face comparison...');
+
+      const aiResponse = await axios.post(`${AI_SERVICE_URL}/compare`, formData, {
         headers: {
-          ...formData.getHeaders(),
-          'Content-Type': 'multipart/form-data'
+          ...formData.getHeaders()
         },
         timeout: 60000 // 60 seconds for processing
       });
 
       const analysisResult = aiResponse.data;
-      console.log(`✅ AI Analysis complete: ${analysisResult.recognized_faces?.length || 0} students recognized`);
+      console.log(`✅ AI Analysis complete: ${analysisResult.totalMatches || 0} students recognized`);
 
       // Update session with AI analysis results
       session.aiAnalysis = {
+        facesDetected: analysisResult.facesDetected,
         processedAt: new Date(),
-        totalFacesDetected: analysisResult.total_detected || 0,
-        recognizedStudents: analysisResult.recognized_faces?.length || 0,
-        unknownFaces: analysisResult.unknown_faces || 0,
-        analysisId: analysisResult.analysis_id,
-        thresholdUsed: threshold,
-        aiProcessingInfo: analysisResult.processing_info || {}
+        message: analysisResult.message,
+        aiServiceVersion: analysisResult.version
+      };
+
+      session.aiProcessingResults = {
+        totalFacesDetected: analysisResult.totalDetected,
+        studentsRecognized: analysisResult.totalMatches,
+        confidenceAverage: analysisResult.matches.length > 0
+          ? analysisResult.matches.reduce((sum, m) => sum + m.confidence, 0) / analysisResult.matches.length
+          : 0,
+        processedAt: new Date()
       };
 
       // Automatically mark attendance based on AI recognition
-      const Attendance = require('../models/Attendance');
       const attendanceUpdates = [];
       const recognitionResults = [];
 
-      // Process recognized faces
-      if (analysisResult.recognized_faces && analysisResult.recognized_faces.length > 0) {
-        for (const recognizedFace of analysisResult.recognized_faces) {
+      // Process matched students (mark as Present)
+      if (analysisResult.matches && analysisResult.matches.length > 0) {
+        for (const match of analysisResult.matches) {
           try {
             // Find existing attendance record
             let attendanceRecord = await Attendance.findOne({
               session: sessionId,
-              student: recognizedFace.student_id
+              student: match.studentId
             });
 
             const attendanceData = {
               status: 'Present',
               markedAt: new Date(),
-              method: 'ai_face_recognition',
-              confidenceScore: recognizedFace.confidence,
-              aiRecognitionData: {
-                faceLocation: recognizedFace.face_location,
-                embeddingMatch: true,
-                processingTimestamp: new Date()
+              method: 'ai_recognition',
+              confidenceScore: match.confidence,
+              faceDetectionData: {
+                boundingBox: {
+                  x: match.faceLocation.left,
+                  y: match.faceLocation.top,
+                  width: match.faceLocation.right - match.faceLocation.left,
+                  height: match.faceLocation.bottom - match.faceLocation.top
+                },
+                embedding: null // Don't store full embedding in attendance
               }
             };
 
             if (attendanceRecord) {
               // Update existing record only if not manually marked
               if (attendanceRecord.method !== 'manual') {
+                const previousStatus = attendanceRecord.status;
                 Object.assign(attendanceRecord, attendanceData);
                 await attendanceRecord.save();
                 attendanceUpdates.push({
                   action: 'updated',
-                  studentId: recognizedFace.student_id,
-                  previousStatus: attendanceRecord.status
+                  studentId: match.studentId,
+                  previousStatus,
+                  newStatus: 'Present'
                 });
               } else {
                 attendanceUpdates.push({
                   action: 'skipped',
-                  studentId: recognizedFace.student_id,
+                  studentId: match.studentId,
                   reason: 'manually_marked'
                 });
               }
-            } else {
-              // Create new attendance record
-              attendanceRecord = new Attendance({
-                student: recognizedFace.student_id,
-                session: sessionId,
-                ...attendanceData
-              });
-              await attendanceRecord.save();
-              attendanceUpdates.push({
-                action: 'created',
-                studentId: recognizedFace.student_id
-              });
             }
 
             // Find student info for response
-            const student = session.class.students.find(s => 
-              s._id.toString() === recognizedFace.student_id
+            const student = studentsWithFaces.find(s => 
+              s._id.toString() === match.studentId
             );
 
             recognitionResults.push({
-              studentId: recognizedFace.student_id,
+              studentId: match.studentId,
               studentName: student ? student.name : 'Unknown',
-              confidence: recognizedFace.confidence,
+              confidence: match.confidence,
+              similarity: match.similarity,
               status: 'Present',
-              method: 'ai_face_recognition',
-              faceLocation: recognizedFace.face_location
+              method: 'ai_recognition',
+              faceLocation: match.faceLocation
             });
 
           } catch (error) {
-            console.error(`❌ Error updating attendance for student ${recognizedFace.student_id}:`, error);
+            console.error(`❌ Error updating attendance for student ${match.studentId}:`, error.message);
           }
         }
       }
 
-      // Optionally mark remaining students as absent
+      // Mark remaining students as absent (if enabled)
       if (markAbsentAfterAnalysis) {
-        const recognizedStudentIds = analysisResult.recognized_faces?.map(f => f.student_id) || [];
+        const recognizedStudentIds = analysisResult.matches?.map(m => m.studentId) || [];
         const allStudentIds = session.class.students.map(s => s._id.toString());
         const unrecognizedStudentIds = allStudentIds.filter(id => !recognizedStudentIds.includes(id));
 
@@ -881,27 +1099,25 @@ const analyzeAndMarkAttendance = async (req, res) => {
               student: studentId
             });
 
-            if (!attendanceRecord) {
-              attendanceRecord = new Attendance({
-                student: studentId,
-                session: sessionId,
-                status: 'Absent',
-                markedAt: new Date(),
-                method: 'ai_auto_absent',
-                aiRecognitionData: {
-                  faceDetected: false,
-                  autoMarkedAbsent: true,
-                  processingTimestamp: new Date()
-                }
-              });
-              await attendanceRecord.save();
-              attendanceUpdates.push({
-                action: 'marked_absent',
-                studentId: studentId
-              });
+            if (attendanceRecord) {
+              // Only update if not manually marked
+              if (attendanceRecord.method !== 'manual' && attendanceRecord.status !== 'Absent') {
+                const previousStatus = attendanceRecord.status;
+                attendanceRecord.status = 'Absent';
+                attendanceRecord.method = 'ai_recognition';
+                attendanceRecord.markedAt = new Date();
+                await attendanceRecord.save();
+                
+                attendanceUpdates.push({
+                  action: 'marked_absent',
+                  studentId,
+                  previousStatus,
+                  newStatus: 'Absent'
+                });
+              }
             }
           } catch (error) {
-            console.error(`❌ Error marking student ${studentId} as absent:`, error);
+            console.error(`❌ Error marking student ${studentId} as absent:`, error.message);
           }
         }
       }
@@ -917,22 +1133,21 @@ const analyzeAndMarkAttendance = async (req, res) => {
           sessionId: sessionId,
           sessionTitle: session.title,
           analysisResults: {
-            totalFacesDetected: analysisResult.total_detected || 0,
-            studentsRecognized: analysisResult.recognized_faces?.length || 0,
-            unknownFaces: analysisResult.unknown_faces || 0,
+            totalFacesDetected: analysisResult.facesDetected,
+            studentsRecognized: analysisResult.totalMatches,
+            unmatchedFaces: analysisResult.unmatchedFaces || 0,
             thresholdUsed: threshold,
-            analysisId: analysisResult.analysis_id
+            totalStudentsInClass: session.class.students.length,
+            studentsWithRegisteredFaces: studentsWithFaces.length
           },
           attendanceUpdates: {
-            totalUpdated: attendanceUpdates.length,
-            created: attendanceUpdates.filter(u => u.action === 'created').length,
+            totalProcessed: attendanceUpdates.length,
             updated: attendanceUpdates.filter(u => u.action === 'updated').length,
             skipped: attendanceUpdates.filter(u => u.action === 'skipped').length,
             markedAbsent: attendanceUpdates.filter(u => u.action === 'marked_absent').length,
             details: attendanceUpdates
           },
           recognitionResults,
-          annotatedImageUrl: analysisResult.annotated_image_url,
           processedAt: new Date()
         }
       };
@@ -947,7 +1162,8 @@ const analyzeAndMarkAttendance = async (req, res) => {
         success: false,
         message: 'AI service error during analysis',
         error: aiError.response?.data?.detail || aiError.message,
-        aiServiceStatus: 'error'
+        aiServiceStatus: 'error',
+        hint: 'Make sure the AI service is running on port 8000'
       });
     }
 
@@ -981,7 +1197,7 @@ const getAutoAttendanceResults = async (req, res) => {
       });
     }
 
-    if (session.class.teacher.toString() !== req.user.id) {
+    if (session.class.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'

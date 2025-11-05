@@ -7,6 +7,11 @@ const ClassManager = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [availableStudents, setAvailableStudents] = useState([]);
+
+  const [selectedStudents, setSelectedStudents] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     subject: '',
@@ -29,7 +34,7 @@ const ClassManager = () => {
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await axios.get(`${API_BASE}/classes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -82,7 +87,7 @@ const ClassManager = () => {
     e.preventDefault();
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const config = {
         headers: { Authorization: `Bearer ${token}` }
       };
@@ -117,7 +122,7 @@ const ClassManager = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       await axios.delete(`${API_BASE}/classes/${classId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -129,6 +134,66 @@ const ClassManager = () => {
       const message = error.response?.data?.message || 'Failed to delete class';
       toast.error(message);
     }
+  };
+
+  const handleManageStudents = async (classItem) => {
+    setSelectedClass(classItem);
+    setShowStudentModal(true);
+    
+    // Fetch all available students
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await axios.get(`${API_BASE}/auth/users?role=student`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        // Filter out students already in the class
+        const enrolledIds = classItem.students?.map(s => s._id || s) || [];
+        const available = response.data.data.filter(
+          student => !enrolledIds.includes(student._id)
+        );
+        setAvailableStudents(available);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      toast.error('Failed to load students');
+    }
+  };
+
+  const handleAddStudents = async () => {
+    if (selectedStudents.length === 0) {
+      toast.error('Please select at least one student');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      await axios.post(
+        `${API_BASE}/classes/${selectedClass._id}/enroll`,
+        { studentIds: selectedStudents },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success(`${selectedStudents.length} student(s) added successfully!`);
+      setShowStudentModal(false);
+      setSelectedStudents([]);
+      fetchClasses(); // Refresh the list
+    } catch (error) {
+      console.error('Error adding students:', error);
+      const message = error.response?.data?.message || 'Failed to add students';
+      toast.error(message);
+    }
+  };
+
+  const toggleStudentSelection = (studentId) => {
+    setSelectedStudents(prev => {
+      if (prev.includes(studentId)) {
+        return prev.filter(id => id !== studentId);
+      } else {
+        return [...prev, studentId];
+      }
+    });
   };
 
   const handleInputChange = (e) => {
@@ -224,6 +289,12 @@ const ClassManager = () => {
                     {classItem.students?.length || 0} enrolled
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => handleManageStudents(classItem)}
+                      className="text-green-600 hover:text-green-900"
+                    >
+                      Manage Students
+                    </button>
                     <button
                       onClick={() => handleEdit(classItem)}
                       className="text-blue-600 hover:text-blue-900"
@@ -375,6 +446,94 @@ const ClassManager = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Student Management Modal */}
+      {showStudentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">
+                Manage Students - {selectedClass?.name}
+              </h2>
+              
+              <div className="mb-4 p-3 bg-blue-50 rounded">
+                <p className="text-sm text-blue-800">
+                  Currently enrolled: <strong>{selectedClass?.students?.length || 0}</strong> students
+                </p>
+              </div>
+
+              {availableStudents.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No students available to add</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    All registered students are already enrolled in this class
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Students to Add:
+                    </label>
+                    <div className="border rounded-lg max-h-64 overflow-y-auto">
+                      {availableStudents.map(student => (
+                        <div
+                          key={student._id}
+                          className="flex items-center p-3 hover:bg-gray-50 border-b last:border-b-0"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedStudents.includes(student._id)}
+                            onChange={() => toggleStudentSelection(student._id)}
+                            className="h-4 w-4 text-blue-600 rounded mr-3"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{student.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {student.email}
+                              {student.studentId && ` • ${student.studentId}`}
+                            </div>
+                            {student.hasFace && (
+                              <span className="text-xs text-green-600">✓ Face registered</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-600 mb-4">
+                    Selected: <strong>{selectedStudents.length}</strong> student(s)
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStudentModal(false);
+                    setSelectedStudents([]);
+                  }}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                {availableStudents.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAddStudents}
+                    disabled={selectedStudents.length === 0}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Add {selectedStudents.length > 0 ? `(${selectedStudents.length})` : ''} Students
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

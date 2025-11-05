@@ -8,7 +8,8 @@ const {
   getSessionAttendance,
   getStudentAttendance,
   getClassAttendanceSummary,
-  exportAttendanceData
+  exportAttendanceData,
+  getMyAttendance
 } = require('../controllers/attendanceController');
 
 // Import middleware
@@ -48,6 +49,16 @@ router.post('/bulk-mark', validateBulkMarkAttendance, bulkMarkAttendance);
 router.get('/session/:sessionId', 
   validateSessionId,
   getSessionAttendance
+);
+
+/**
+ * @route   GET /api/attendance/my-attendance/:classId
+ * @desc    Get student's own attendance records for a specific class
+ * @access  Private (Student only)
+ */
+router.get('/my-attendance/:classId', 
+  validateClassId,
+  getMyAttendance
 );
 
 /**

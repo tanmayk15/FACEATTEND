@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { formatDate, formatDateTime } from '../utils/dateTimeFormat';
 
 const AttendanceBoard = ({ sessionId: propSessionId }) => {
   const [sessions, setSessions] = useState([]);
@@ -26,7 +27,7 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
 
   const fetchSessions = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       // First get classes, then sessions for each class
       const classesResponse = await axios.get(`${API_BASE}/classes`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -67,7 +68,7 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       
       // Fetch session details
       const sessionResponse = await axios.get(`${API_BASE}/sessions/${sessionId}`, {
@@ -84,7 +85,9 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
       }
 
       if (attendanceResponse.data.success) {
-        setAttendanceData(attendanceResponse.data.data);
+        // The API returns { session, attendance, stats }
+        // We need just the attendance array
+        setAttendanceData(attendanceResponse.data.data.attendance || []);
       }
     } catch (error) {
       console.error('Error fetching attendance data:', error);
@@ -96,11 +99,14 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
 
   const handleMarkAttendance = async (studentId, status) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
+      // Capitalize the first letter to match backend expectations (Present, Absent, Late)
+      const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+      
       const data = {
         sessionId: selectedSession,
         studentId: studentId,
-        status: status,
+        status: capitalizedStatus,
         method: 'manual'
       };
 
@@ -109,7 +115,7 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
       });
 
       if (response.data.success) {
-        toast.success(`Attendance marked as ${status}`);
+        toast.success(`Attendance marked as ${capitalizedStatus}`);
         fetchAttendanceData(selectedSession);
         setShowMarkModal(false);
         setSelectedStudent(null);
@@ -134,7 +140,7 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
         record.student?.name || 'Unknown',
         record.student?.studentId || 'Unknown',
         record.status,
-        new Date(record.markedAt).toLocaleString(),
+        formatDateTime(record.markedAt),
         record.method || 'manual'
       ])
     ];
@@ -153,7 +159,9 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
 
   const getFilteredData = () => {
     if (filter === 'all') return attendanceData;
-    return attendanceData.filter(record => record.status === filter);
+    return attendanceData.filter(record => 
+      record.status && record.status.toLowerCase() === filter.toLowerCase()
+    );
   };
 
   const getStatusBadge = (status) => {
@@ -172,9 +180,9 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
 
   const getAttendanceStats = () => {
     const total = attendanceData.length;
-    const present = attendanceData.filter(r => r.status === 'present').length;
-    const absent = attendanceData.filter(r => r.status === 'absent').length;
-    const late = attendanceData.filter(r => r.status === 'late').length;
+    const present = attendanceData.filter(r => r.status && r.status.toLowerCase() === 'present').length;
+    const absent = attendanceData.filter(r => r.status && r.status.toLowerCase() === 'absent').length;
+    const late = attendanceData.filter(r => r.status && r.status.toLowerCase() === 'late').length;
     
     return { total, present, absent, late };
   };
@@ -196,7 +204,7 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
             <option value="">Select a session</option>
             {sessions.map((session) => (
               <option key={session._id} value={session._id}>
-                {session.className} - {session.title} ({new Date(session.date).toLocaleDateString()})
+                {session.className} - {session.title} ({formatDate(session.date)})
               </option>
             ))}
           </select>
@@ -216,7 +224,7 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
           <h3 className="font-semibold text-lg mb-2">{sessionInfo.title}</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="font-medium">Date:</span> {new Date(sessionInfo.date).toLocaleDateString()}
+              <span className="font-medium">Date:</span> {formatDate(sessionInfo.date)}
             </div>
             <div>
               <span className="font-medium">Total Students:</span> {stats.total}
@@ -320,7 +328,7 @@ const AttendanceBoard = ({ sessionId: propSessionId }) => {
                         {getStatusBadge(record.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(record.markedAt).toLocaleString()}
+                        {formatDateTime(record.markedAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${

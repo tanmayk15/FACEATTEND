@@ -39,7 +39,7 @@ const createClass = async (req, res) => {
       subject,
       schedule,
       description,
-      teacher: req.user.id
+      teacher: req.user.userId // Changed from req.user.userId to req.user.userId
     });
 
     const savedClass = await newClass.save();
@@ -73,7 +73,7 @@ const getTeacherClasses = async (req, res) => {
       });
     }
 
-    const classes = await Class.find({ teacher: req.user.id })
+    const classes = await Class.find({ teacher: req.user.userId })
       .populate('students', 'name email studentId')
       .populate('teacher', 'name email')
       .sort({ createdAt: -1 });
@@ -117,6 +117,8 @@ const getTeacherClasses = async (req, res) => {
 // @access  Private (Student only)
 const getStudentClasses = async (req, res) => {
   try {
+    console.log('🔍 getStudentClasses called for user:', req.user.userId, 'Role:', req.user.role);
+    
     if (req.user.role !== 'student') {
       return res.status(403).json({
         success: false,
@@ -124,10 +126,12 @@ const getStudentClasses = async (req, res) => {
       });
     }
 
-    const classes = await Class.find({ students: req.user.id })
+    const classes = await Class.find({ students: req.user.userId })
       .populate('teacher', 'name email')
       .populate('students', 'name email studentId')
       .sort({ 'schedule.dayOfWeek': 1, 'schedule.startTime': 1 });
+
+    console.log('📚 Found', classes.length, 'classes for student');
 
     // Add attendance stats for each class
     const classesWithStats = await Promise.all(
@@ -137,7 +141,7 @@ const getStudentClasses = async (req, res) => {
         
         const attendanceRecords = await Attendance.find({
           session: { $in: sessionIds },
-          student: req.user.id
+          student: req.user.userId
         });
 
         const totalSessions = sessions.length;
@@ -156,6 +160,8 @@ const getStudentClasses = async (req, res) => {
         };
       })
     );
+
+    console.log('✅ Sending', classesWithStats.length, 'classes with stats');
 
     res.json({
       success: true,
@@ -191,9 +197,9 @@ const getClassById = async (req, res) => {
     }
 
     // Check if user has access to this class
-    const isTeacher = req.user.role === 'teacher' && classDoc.teacher._id.toString() === req.user.id;
+    const isTeacher = req.user.role === 'teacher' && classDoc.teacher._id.toString() === req.user.userId;
     const isEnrolledStudent = req.user.role === 'student' && 
-      classDoc.students.some(student => student._id.toString() === req.user.id);
+      classDoc.students.some(student => student._id.toString() === req.user.userId);
 
     if (!isTeacher && !isEnrolledStudent) {
       return res.status(403).json({
@@ -270,7 +276,7 @@ const enrollStudents = async (req, res) => {
     }
 
     // Verify teacher owns this class
-    if (classDoc.teacher.toString() !== req.user.id) {
+    if (classDoc.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only enroll students in your own classes'
@@ -366,7 +372,7 @@ const removeStudent = async (req, res) => {
     }
 
     // Verify teacher owns this class
-    if (classDoc.teacher.toString() !== req.user.id) {
+    if (classDoc.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only remove students from your own classes'
@@ -432,7 +438,7 @@ const updateClass = async (req, res) => {
     }
 
     // Verify teacher owns this class
-    if (classDoc.teacher.toString() !== req.user.id) {
+    if (classDoc.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only update your own classes'
@@ -491,7 +497,7 @@ const deleteClass = async (req, res) => {
     }
 
     // Verify teacher owns this class
-    if (classDoc.teacher.toString() !== req.user.id) {
+    if (classDoc.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only delete your own classes'

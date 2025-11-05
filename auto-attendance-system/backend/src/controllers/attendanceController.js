@@ -36,9 +36,9 @@ const markAttendance = async (req, res) => {
 
     // Check user permissions
     const isTeacher = req.user.role === 'teacher' && 
-      session.class.teacher.toString() === req.user.id;
+      session.class.teacher.toString() === req.user.userId;
     const isStudentMarkingSelf = req.user.role === 'student' && 
-      req.user.id === studentId;
+      req.user.userId === studentId;
 
     if (!isTeacher && !isStudentMarkingSelf) {
       return res.status(403).json({
@@ -66,7 +66,7 @@ const markAttendance = async (req, res) => {
       const oldStatus = attendance.status;
       attendance.status = status;
       attendance.method = method;
-      attendance.markedBy = req.user.id;
+      attendance.markedBy = req.user.userId;
       attendance.markedAt = new Date();
       if (notes) attendance.notes = notes;
 
@@ -80,7 +80,7 @@ const markAttendance = async (req, res) => {
           originalStatus: oldStatus,
           newStatus: status,
           reason: notes || 'Manual update',
-          changedBy: req.user.id
+          changedBy: req.user.userId
         });
         await session.save();
       }
@@ -91,7 +91,7 @@ const markAttendance = async (req, res) => {
         session: sessionId,
         status,
         method,
-        markedBy: req.user.id,
+        markedBy: req.user.userId,
         notes
       });
 
@@ -153,7 +153,7 @@ const bulkMarkAttendance = async (req, res) => {
       });
     }
 
-    if (session.class.teacher.toString() !== req.user.id) {
+    if (session.class.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only mark attendance for your own sessions'
@@ -185,7 +185,7 @@ const bulkMarkAttendance = async (req, res) => {
           {
             status,
             method: 'manual',
-            markedBy: req.user.id,
+            markedBy: req.user.userId,
             markedAt: new Date(),
             ...(notes && { notes })
           },
@@ -239,9 +239,9 @@ const getSessionAttendance = async (req, res) => {
     }
 
     const isTeacher = req.user.role === 'teacher' && 
-      session.class.teacher.toString() === req.user.id;
+      session.class.teacher.toString() === req.user.userId;
     const isEnrolledStudent = req.user.role === 'student' && 
-      session.class.students.includes(req.user.id);
+      session.class.students.includes(req.user.userId);
 
     if (!isTeacher && !isEnrolledStudent) {
       return res.status(403).json({
@@ -253,7 +253,7 @@ const getSessionAttendance = async (req, res) => {
     // Build query based on user role
     let query = { session: sessionId };
     if (req.user.role === 'student') {
-      query.student = req.user.id;
+      query.student = req.user.userId;
     }
 
     const attendance = await Attendance.find(query)
@@ -308,7 +308,7 @@ const getStudentAttendance = async (req, res) => {
 
     // Check permissions
     const isTeacher = req.user.role === 'teacher';
-    const isStudentViewingSelf = req.user.role === 'student' && req.user.id === studentId;
+    const isStudentViewingSelf = req.user.role === 'student' && req.user.userId === studentId;
 
     if (!isTeacher && !isStudentViewingSelf) {
       return res.status(403).json({
@@ -340,7 +340,7 @@ const getStudentAttendance = async (req, res) => {
 
     // For teachers, verify they have access to the classes
     if (isTeacher) {
-      const teacherClasses = await Class.find({ teacher: req.user.id });
+      const teacherClasses = await Class.find({ teacher: req.user.userId });
       const teacherSessionIds = [];
       
       for (const cls of teacherClasses) {
@@ -425,7 +425,7 @@ const getClassAttendanceSummary = async (req, res) => {
       });
     }
 
-    if (classDoc.teacher.toString() !== req.user.id) {
+    if (classDoc.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only view summaries for your own classes'
@@ -530,7 +530,7 @@ const exportAttendanceData = async (req, res) => {
 
     // Verify class ownership
     const classDoc = await Class.findById(classId).populate('students');
-    if (!classDoc || classDoc.teacher.toString() !== req.user.id) {
+    if (!classDoc || classDoc.teacher.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied to this class'
@@ -613,11 +613,75 @@ const exportAttendanceData = async (req, res) => {
   }
 };
 
+// @desc    Get student's own attendance records for a specific class
+// @route   GET /api/attendance/my-attendance/:classId
+// @access  Private (Student only)
+const getMyAttendance = async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const studentId = req.user.userId;
+
+    console.log('🔍 getMyAttendance called - ClassID:', classId, 'StudentID:', studentId);
+
+    // Verify the class exists
+    const classDoc = await Class.findById(classId);
+    if (!classDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found'
+      });
+    }
+
+    // Verify student is enrolled in this class
+    if (!classDoc.students.includes(studentId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not enrolled in this class'
+      });
+    }
+
+    // Get all sessions for this class
+    const sessions = await Session.find({ class: classId }).sort({ date: -1 });
+    const sessionIds = sessions.map(s => s._id);
+
+    console.log('📚 Found', sessions.length, 'sessions for class');
+
+    // Get attendance records for this student in these sessions
+    const attendanceRecords = await Attendance.find({
+      session: { $in: sessionIds },
+      student: studentId
+    })
+    .populate({
+      path: 'session',
+      select: 'title date startTime endTime'
+    })
+    .sort({ date: -1 });
+
+    console.log('✅ Found', attendanceRecords.length, 'attendance records');
+
+    res.json({
+      success: true,
+      message: 'Attendance records retrieved successfully',
+      data: attendanceRecords,
+      count: attendanceRecords.length
+    });
+
+  } catch (error) {
+    console.error('Get my attendance error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving attendance records',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   markAttendance,
   bulkMarkAttendance,
   getSessionAttendance,
   getStudentAttendance,
   getClassAttendanceSummary,
-  exportAttendanceData
+  exportAttendanceData,
+  getMyAttendance
 };

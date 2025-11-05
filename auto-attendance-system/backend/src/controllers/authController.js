@@ -46,6 +46,8 @@ const register = async (req, res) => {
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Registration validation errors:', JSON.stringify(errors.array(), null, 2));
+      console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
       return res.status(400).json({
         status: 'error',
         message: 'Validation failed',
@@ -53,7 +55,7 @@ const register = async (req, res) => {
       });
     }
 
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, faceEmbedding, faceLocation, studentId } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findByEmail(email);
@@ -64,13 +66,41 @@ const register = async (req, res) => {
       });
     }
 
-    // Create new user
-    const user = new User({
+    // Check if studentId is already taken (for students)
+    if (role === 'student' && studentId) {
+      const existingStudent = await User.findOne({ studentId: studentId.trim() });
+      if (existingStudent) {
+        return res.status(409).json({
+          status: 'error',
+          message: 'Student ID is already in use'
+        });
+      }
+    }
+
+    // Create new user with optional face data
+    const userData = {
       name,
       email,
       password,
       role: role || 'student'
-    });
+    };
+
+    // Add studentId for students
+    if (role === 'student' && studentId) {
+      userData.studentId = studentId.trim();
+    }
+
+    // Add face data if provided
+    if (faceEmbedding && Array.isArray(faceEmbedding) && faceEmbedding.length === 128) {
+      userData.faceData = {
+        faceEmbedding: faceEmbedding,
+        isEnrolled: true,
+        enrolledAt: new Date()
+      };
+      console.log('✅ Face data included in registration');
+    }
+
+    const user = new User(userData);
 
     await user.save();
 
@@ -361,10 +391,181 @@ const logout = async (req, res) => {
   }
 };
 
+/**
+ * Get all users (teachers can view students)
+ * GET /api/auth/users?role=student
+ */
+const getAllUsers = async (req, res) => {
+  try {
+    const { role } = req.query;
+    
+    const filter = {};
+    if (role) {
+      filter.role = role;
+    }
+
+    const users = await User.find(filter)
+      .select('name email studentId role faceData.faceEmbedding createdAt')
+      .sort({ createdAt: -1 });
+
+    // Transform to include face registration status
+    const usersWithFaceStatus = users.map(user => ({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      studentId: user.studentId,
+      role: user.role,
+      hasFace: user.faceData?.faceEmbedding?.length === 128,
+      createdAt: user.createdAt
+    }));
+
+    res.json({
+      success: true,
+      data: usersWithFaceStatus
+    });
+
+  } catch (error) {
+    console.error('❌ Get all users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users'
+    });
+  }
+};
+
+/**
+ * Get user profile
+ * GET /api/auth/profile
+ */
+const getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('-password -refreshToken');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch profile'
+    });
+  }
+};
+
+/**
+ * Update user profile
+ * PUT /api/auth/profile
+ */
+const updateProfile = async (req, res) => {
+  try {
+    const { name, email, studentId } = req.body;
+    const userId = req.user.userId;
+
+    // Validate inputs
+    if (name && (name.trim().length < 2 || name.trim().length > 50)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name must be between 2 and 50 characters'
+      });
+    }
+
+    if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address'
+      });
+    }
+
+    // Check if email is already taken by another user
+    if (email) {
+      const existingUser = await User.findOne({ 
+        email: email.toLowerCase(), 
+        _id: { $ne: userId } 
+      });
+      
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email is already in use by another account'
+        });
+      }
+    }
+
+    // Check if studentId is already taken by another user
+    if (studentId) {
+      const existingStudent = await User.findOne({ 
+        studentId: studentId.trim(), 
+        _id: { $ne: userId } 
+      });
+      
+      if (existingStudent) {
+        return res.status(409).json({
+          success: false,
+          message: 'Student ID is already in use by another account'
+        });
+      }
+    }
+
+    // Build update object
+    const updateData = {};
+    if (name) updateData.name = name.trim();
+    if (email) updateData.email = email.toLowerCase();
+    if (studentId !== undefined) updateData.studentId = studentId.trim();
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password -refreshToken');
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   refreshToken,
-  logout
+  logout,
+  getAllUsers,
+  getProfile,
+  updateProfile
 };

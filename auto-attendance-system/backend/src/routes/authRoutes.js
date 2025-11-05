@@ -32,6 +32,27 @@ router.post('/login', validateLogin, authController.login);
 router.get('/me', authMiddleware, authController.getMe);
 
 /**
+ * GET /api/auth/profile
+ * Get detailed user profile information
+ * Protected route - requires valid JWT
+ */
+router.get('/profile', authMiddleware, authController.getProfile);
+
+/**
+ * PUT /api/auth/profile
+ * Update user profile information
+ * Protected route - requires valid JWT
+ */
+router.put('/profile', authMiddleware, authController.updateProfile);
+
+/**
+ * GET /api/auth/users
+ * Get all users (filtered by role if specified)
+ * Protected route - requires teacher role
+ */
+router.get('/users', authMiddleware, roleMiddleware(['teacher']), authController.getAllUsers);
+
+/**
  * POST /api/auth/refresh
  * Refresh access token using refresh token
  * Public route (but requires refresh token in cookies)

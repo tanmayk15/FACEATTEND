@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { formatDate, formatDateTime } from '../utils/dateTimeFormat';
 import { 
   BoltIcon, 
   PhotoIcon, 
@@ -44,7 +45,7 @@ const AutomaticAttendance = () => {
 
   const fetchClasses = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/classes', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -52,9 +53,15 @@ const AutomaticAttendance = () => {
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+      console.log('Classes API response:', data);
+
+      if (response.ok && data.success) {
         setClasses(data.data || []);
+        console.log('Classes loaded:', data.data?.length || 0);
+      } else {
+        console.error('Failed to load classes:', data.message);
+        toast.error(data.message || 'Failed to load classes');
       }
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -64,7 +71,7 @@ const AutomaticAttendance = () => {
 
   const fetchClassSessions = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/sessions/class/${selectedClass}?status=active`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -86,7 +93,7 @@ const AutomaticAttendance = () => {
 
   const fetchSessionDetails = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/sessions/${selectedSession}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -133,7 +140,7 @@ const AutomaticAttendance = () => {
     setAnalysisResults(null);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/sessions/${selectedSession}/auto-attendance`, {
         method: 'POST',
         headers: {
@@ -167,7 +174,7 @@ const AutomaticAttendance = () => {
 
   const getAutoAttendanceResults = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/sessions/${selectedSession}/auto-attendance-results`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -246,6 +253,14 @@ const AutomaticAttendance = () => {
                     </option>
                   ))}
                 </select>
+                {classes.length === 0 && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    No classes found. Please create a class first.
+                  </p>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  Found {classes.length} class(es)
+                </p>
               </div>
 
               {/* Session Selection */}
@@ -265,7 +280,7 @@ const AutomaticAttendance = () => {
                     <option value="">Choose a session...</option>
                     {sessions.map(session => (
                       <option key={session._id} value={session._id}>
-                        {session.title} - {new Date(session.date).toLocaleDateString()}
+                        {session.title} - {formatDate(session.date)}
                         {session.aiAnalysis && ' ✨ (AI Analyzed)'}
                       </option>
                     ))}
@@ -332,7 +347,7 @@ const AutomaticAttendance = () => {
                   <div className="text-sm text-blue-800 space-y-1">
                     <p><strong>Class:</strong> {selectedClassData?.name}</p>
                     <p><strong>Session:</strong> {sessionDetails.title}</p>
-                    <p><strong>Date:</strong> {new Date(sessionDetails.date).toLocaleDateString()}</p>
+                    <p><strong>Date:</strong> {formatDate(sessionDetails.date)}</p>
                     <p><strong>Status:</strong> {sessionDetails.status}</p>
                     {sessionDetails.photoURL && (
                       <p className="flex items-center">
@@ -496,7 +511,7 @@ const AutomaticAttendance = () => {
                   <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
                     <p><strong>Analysis ID:</strong> {analysisResults.analysisResults?.analysisId}</p>
                     <p><strong>Threshold Used:</strong> {analysisResults.analysisResults?.thresholdUsed}</p>
-                    <p><strong>Processed At:</strong> {new Date(analysisResults.processedAt).toLocaleString()}</p>
+                    <p><strong>Processed At:</strong> {formatDateTime(analysisResults.processedAt)}</p>
                   </div>
                 </div>
               )}

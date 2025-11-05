@@ -34,9 +34,21 @@ const validateRegister = [
     .isIn(['teacher', 'student'])
     .withMessage('Role must be either teacher or student'),
 
+  body('faceEmbedding')
+    .optional()
+    .isArray()
+    .withMessage('Face embedding must be an array'),
+
+  body('faceEmbedding.*')
+    .optional()
+    .isFloat()
+    .withMessage('Face embedding values must be numbers'),
+
   body('confirmPassword')
+    .optional()
     .custom((value, { req }) => {
-      if (value !== req.body.password) {
+      // Only validate if confirmPassword is provided
+      if (value && value !== req.body.password) {
         throw new Error('Password confirmation does not match password');
       }
       return true;

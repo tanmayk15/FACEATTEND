@@ -7,6 +7,7 @@ import os
 import io
 import json
 import aiofiles
+import numpy as np
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 import logging
@@ -176,6 +177,83 @@ async def root():
             "database": "/database/info"
         }
     }
+
+@app.post("/detect-faces")
+async def detect_faces_simple(
+    file: UploadFile = File(...),
+    recognizer: FaceRecognizer = Depends(get_face_recognizer)
+):
+    """
+    Simple face detection endpoint - just detect faces without recognition
+    
+    This endpoint:
+    1. Receives an image file
+    2. Detects all faces using MTCNN
+    3. Extracts embeddings for each face
+    4. Returns detection results (no student matching)
+    
+    Used for initial photo upload and face counting
+    """
+    try:
+        logger.info(f"📸 Detecting faces in uploaded image")
+        
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Read image data
+        image_data = await file.read()
+        
+        # Load image using our processor
+        image = ImageProcessor.load_image_from_bytes(image_data)
+        if image is None:
+            raise HTTPException(status_code=400, detail="Invalid image format")
+        
+        # Validate image
+        if not ImageProcessor.validate_image(image):
+            raise HTTPException(status_code=400, detail="Image does not meet requirements")
+        
+        # Detect faces
+        detected_faces = recognizer.detect_faces(image)
+        
+        # Extract embeddings for all detected faces
+        embeddings = []
+        face_locations = []
+        
+        for face in detected_faces:
+            bbox = face['bbox']
+            embedding = recognizer.extract_embedding(image, bbox)
+            
+            if embedding is not None:
+                embeddings.append(embedding.tolist())
+                face_locations.append({
+                    'top': int(bbox[1]),
+                    'right': int(bbox[2]),
+                    'bottom': int(bbox[3]),
+                    'left': int(bbox[0])
+                })
+        
+        # Prepare response
+        response = {
+            "faces_detected": len(detected_faces),
+            "facesDetected": len(detected_faces),  # Backward compatibility
+            "embeddings": embeddings,
+            "face_locations": face_locations,
+            "faceLocations": face_locations,  # Backward compatibility
+            "message": f"Successfully detected {len(detected_faces)} face(s)",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "version": "4.0.0"
+        }
+        
+        logger.info(f"✅ Face detection complete: {len(detected_faces)} faces detected")
+        
+        return JSONResponse(content=response)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error detecting faces: {e}")
+        raise HTTPException(status_code=500, detail=f"Face detection failed: {str(e)}")
 
 @app.post("/analyze")
 async def analyze_classroom_image(
@@ -403,6 +481,165 @@ async def enroll_student(
     except Exception as e:
         logger.error(f"❌ Error enrolling student: {e}")
         raise HTTPException(status_code=500, detail=f"Enrollment failed: {str(e)}")
+
+@app.post("/compare")
+async def compare_faces(
+    file: UploadFile = File(...),
+    request_data: str = Form(...),
+    recognizer: FaceRecognizer = Depends(get_face_recognizer)
+):
+    """
+    Compare detected faces in classroom photo with reference embeddings
+    
+    This is the main attendance recognition endpoint:
+    1. Receives classroom photo
+    2. Receives reference embeddings and student IDs from backend
+    3. Detects all faces in the photo
+    4. Compares each detected face with reference embeddings
+    5. Returns matches with confidence scores
+    
+    Args:
+        file: Classroom photo
+        request_data: JSON string containing referenceEmbeddings, studentIds, threshold
+    """
+    try:
+        logger.info(f"🔍 Comparing faces in classroom photo with reference database")
+        
+        # Parse request data
+        data = json.loads(request_data)
+        reference_embeddings = data.get('referenceEmbeddings', [])
+        student_ids = data.get('studentIds', [])
+        threshold = data.get('threshold', 0.6)
+        
+        logger.info(f"📊 Reference data: {len(reference_embeddings)} students, threshold: {threshold}")
+        
+        if not reference_embeddings or not student_ids:
+            raise HTTPException(status_code=400, detail="Missing reference embeddings or student IDs")
+        
+        if len(reference_embeddings) != len(student_ids):
+            raise HTTPException(status_code=400, detail="Number of embeddings must match number of student IDs")
+        
+        # Validate file
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Read and process image
+        image_data = await file.read()
+        image = ImageProcessor.load_image_from_bytes(image_data)
+        
+        if image is None:
+            raise HTTPException(status_code=400, detail="Invalid image format")
+        
+        # Detect faces in classroom photo
+        detected_faces = recognizer.detect_faces(image)
+        logger.info(f"👥 Detected {len(detected_faces)} faces in classroom photo")
+        
+        if len(detected_faces) == 0:
+            return JSONResponse(content={
+                "facesDetected": 0,
+                "totalMatches": 0,
+                "matches": [],
+                "unmatchedFaces": 0,
+                "message": "No faces detected in classroom photo",
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            })
+        
+        # Extract embeddings for detected faces
+        detected_embeddings = []
+        valid_face_indices = []
+        
+        for i, face in enumerate(detected_faces):
+            bbox = face['bbox']
+            embedding = recognizer.extract_embedding(image, bbox)
+            
+            if embedding is not None:
+                detected_embeddings.append(embedding)
+                valid_face_indices.append(i)
+        
+        logger.info(f"✅ Extracted {len(detected_embeddings)} valid embeddings from detected faces")
+        
+        # Convert reference embeddings to numpy arrays
+        reference_embeddings_np = [np.array(emb, dtype=np.float32) for emb in reference_embeddings]
+        
+        # Check if we need to handle dimension mismatch
+        detected_dim = detected_embeddings[0].shape[0] if len(detected_embeddings) > 0 else 512
+        reference_dim = reference_embeddings_np[0].shape[0] if len(reference_embeddings_np) > 0 else 128
+        
+        logger.info(f"🔍 Detected embedding dimension: {detected_dim}, Reference dimension: {reference_dim}")
+        
+        # If dimensions don't match, warn and skip comparison
+        if detected_dim != reference_dim:
+            logger.error(f"❌ Dimension mismatch: Cannot compare {detected_dim}D with {reference_dim}D embeddings")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "dimension_mismatch",
+                    "message": f"Detected embeddings are {detected_dim}-dimensional but stored embeddings are {reference_dim}-dimensional. Students need to re-register their faces.",
+                    "facesDetected": len(detected_faces),
+                    "totalMatches": 0,
+                    "matches": [],
+                    "unmatchedFaces": len(detected_embeddings),
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }
+            )
+        
+        # Compare each detected face with all reference faces
+        matches = []
+        matched_student_ids = set()
+        
+        for det_idx, detected_emb in enumerate(detected_embeddings):
+            best_match_idx = -1
+            best_similarity = -1.0
+            
+            # Compare with all reference embeddings
+            for ref_idx, reference_emb in enumerate(reference_embeddings_np):
+                # Calculate cosine similarity
+                similarity = float(np.dot(detected_emb, reference_emb) / 
+                                 (np.linalg.norm(detected_emb) * np.linalg.norm(reference_emb)))
+                
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match_idx = ref_idx
+            
+            # If similarity is above threshold and student not already matched
+            if best_similarity >= threshold and student_ids[best_match_idx] not in matched_student_ids:
+                matches.append({
+                    "studentId": student_ids[best_match_idx],
+                    "confidence": round(best_similarity, 4),
+                    "faceIndex": valid_face_indices[det_idx],
+                    "bbox": detected_faces[valid_face_indices[det_idx]]['bbox']
+                })
+                matched_student_ids.add(student_ids[best_match_idx])
+                logger.info(f"   ✅ Match found: Student {student_ids[best_match_idx]} with confidence {best_similarity:.4f}")
+        
+        # Calculate unmatched faces
+        unmatched_faces = len(detected_embeddings) - len(matches)
+        
+        response = {
+            "facesDetected": len(detected_faces),
+            "validEmbeddings": len(detected_embeddings),
+            "totalMatches": len(matches),
+            "matches": matches,
+            "unmatchedFaces": unmatched_faces,
+            "threshold": threshold,
+            "message": f"Successfully matched {len(matches)} out of {len(detected_embeddings)} detected faces",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        
+        logger.info(f"✅ Comparison complete: {len(matches)} matches, {unmatched_faces} unmatched")
+        
+        return JSONResponse(content=response)
+        
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ Invalid JSON in request_data: {e}")
+        raise HTTPException(status_code=400, detail="Invalid JSON format in request_data")
+    except Exception as e:
+        logger.error(f"❌ Error comparing faces: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Face comparison failed: {str(e)}")
 
 @app.get("/database/info")
 async def get_database_info(recognizer: FaceRecognizer = Depends(get_face_recognizer)):

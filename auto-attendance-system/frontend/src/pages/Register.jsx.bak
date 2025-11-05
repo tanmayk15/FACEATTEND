@@ -6,8 +6,7 @@ import FaceCapture from '../components/FaceCapture';
 
 /**
  * Registration Page Component
- * Handles new user registration with role selection and face capture
- * Two-step process: 1) Basic info, 2) Face registration
+ * Handles new user registration with role selection
  */
 
 const Register = () => {
@@ -158,34 +157,6 @@ const Register = () => {
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
               )}
             </div>
-
-            {/* Student ID Field - Only show for students */}
-            {watch('role') === 'student' && (
-              <div>
-                <label htmlFor="studentId" className="block text-sm font-medium text-gray-700">
-                  Student ID / Roll Number
-                </label>
-                <input
-                  {...register('studentId', {
-                    required: watch('role') === 'student' ? 'Student ID is required' : false,
-                    minLength: {
-                      value: 3,
-                      message: 'Student ID must be at least 3 characters'
-                    },
-                    maxLength: {
-                      value: 20,
-                      message: 'Student ID must be less than 20 characters'
-                    }
-                  })}
-                  type="text"
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter your student ID or roll number"
-                />
-                {errors.studentId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.studentId.message}</p>
-                )}
-              </div>
-            )}
 
             {/* Role Selection */}
             <div>

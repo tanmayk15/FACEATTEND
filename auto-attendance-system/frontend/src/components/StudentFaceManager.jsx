@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
+import { formatDate } from '../utils/dateTimeFormat';
 import { CameraIcon, UserIcon, CheckCircleIcon, XCircleIcon, PhotoIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
 import { CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 
@@ -33,7 +34,7 @@ const StudentFaceManager = () => {
 
   const fetchClasses = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/classes', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -53,7 +54,7 @@ const StudentFaceManager = () => {
 
   const fetchClassStudents = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/classes/${selectedClass}/students/face-data`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -165,7 +166,7 @@ const StudentFaceManager = () => {
     setProcessingResult(null);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const formData = new FormData();
       formData.append('photo', selectedFile);
 
@@ -584,7 +585,7 @@ const StudentFaceManager = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {student.uploadedAt 
-                          ? new Date(student.uploadedAt).toLocaleDateString()
+                          ? formatDate(student.uploadedAt)
                           : 'Never'
                         }
                       </td>

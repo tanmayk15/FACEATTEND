@@ -25,7 +25,7 @@ const DashboardTeacher = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
