@@ -17,13 +17,14 @@ FaceAttend is a comprehensive **AI-powered attendance management system** that r
 
 ### 🎯 **Key Features**
 
-✅ **AI Face Recognition** - Automatic student identification from classroom photos  
+✅ **AI Face Recognition** - Automatic student identification from classroom photos using FaceNet (128-d embeddings)  
 ✅ **Real-time Processing** - Instant attendance marking in seconds  
-✅ **Teacher Dashboard** - Complete class and session management  
-✅ **Student Portal** - Self-service photo upload and attendance history  
-✅ **Automatic Reports** - Export attendance data and analytics  
-✅ **Mobile Responsive** - Works on phones, tablets, and desktops  
-✅ **Secure & Private** - Encrypted face data with GDPR compliance  
+✅ **Teacher Dashboard** - Complete class and session management with analytics  
+✅ **Student Portal** - Self-service photo upload, attendance history, and class enrollment  
+✅ **Automatic Reports** - Export attendance data with DD/MM/YYYY date format  
+✅ **Mobile Responsive** - Works seamlessly on phones, tablets, and desktops  
+✅ **Secure Authentication** - JWT-based authentication with token refresh  
+✅ **Manual Override** - Teachers can manually mark/edit attendance when needed  
 ✅ **Scalable Architecture** - Handles 10 to 10,000+ students  
 
 ---
@@ -70,10 +71,10 @@ npm run dev
 
 ### **3️⃣ AI Service Setup**
 ```bash
-cd ../ai_service
+cd ../ai-service  # Note: Use ai-service folder (with hyphen)
 pip install -r requirements.txt
 cp .env.example .env
-python main_simple.py
+python main.py  # Uses FaceNet with 128-d embeddings
 ```
 
 ### **4️⃣ Frontend Setup**
@@ -134,10 +135,11 @@ npm run dev
 
 ### **AI Service**
 - **Python + FastAPI** - High-performance API
-- **PyTorch** - Deep learning framework
-- **OpenCV** - Computer vision
-- **FaceNet** - Face recognition models
-- **FAISS** - Vector similarity search
+- **DeepFace** - Face recognition framework
+- **FaceNet** - Face recognition model (128-d embeddings)
+- **TensorFlow** - Deep learning backend
+- **OpenCV** - Computer vision and face detection
+- **NumPy** - Numerical computations
 - **Pillow** - Image processing
 
 ---
@@ -149,28 +151,30 @@ FACEATTEND/
 ├── auto-attendance-system/
 │   ├── backend/                 # Node.js API Server
 │   │   ├── src/
-│   │   │   ├── controllers/     # API Controllers (6)
+│   │   │   ├── controllers/     # API Controllers (7)
 │   │   │   ├── models/          # Database Models (5)
-│   │   │   ├── routes/          # API Routes (6)
+│   │   │   ├── routes/          # API Routes (7)
 │   │   │   ├── middleware/      # Auth & Validation
-│   │   │   └── scripts/         # Database Seeders
-│   │   └── uploads/             # File Storage
+│   │   │   └── scripts/         # Database Seeders & Utilities
+│   │   └── uploads/             # File Storage (sessions, students, profiles)
 │   │
 │   ├── frontend/                # React Application
 │   │   ├── src/
-│   │   │   ├── components/      # UI Components (8)
-│   │   │   ├── pages/           # Route Pages
-│   │   │   └── context/         # State Management
+│   │   │   ├── components/      # UI Components (15+)
+│   │   │   ├── pages/           # Route Pages (Login, Register, Dashboards)
+│   │   │   ├── context/         # State Management (Auth)
+│   │   │   └── utils/           # Utility Functions (dateTimeFormat)
 │   │   └── public/              # Static Assets
 │   │
-│   └── ai_service/              # Python AI Service
-│       ├── app/
-│       │   ├── models/          # AI Models
-│       │   └── utils/           # Image Processing
-│       ├── static/              # Processed Images
+│   └── ai-service/              # Python AI Service (128-d FaceNet)
+│       ├── models/              # Face Recognition Models
+│       ├── utils/               # Image Processing & Backend Integration
+│       ├── static/              # Processed Images & Enrollments
 │       └── requirements.txt     # Python Dependencies
 │
-├── docs/                        # Documentation
+├── docs/                        # Project Documentation
+├── HIGH_PRIORITY_FEATURES_COMPLETED.md  # Feature Completion Log
+├── PROJECT_DOCUMENTATION.md     # Detailed Project Docs
 ├── .gitignore                   # Git Ignore Rules
 └── README.md                    # This File
 ```
@@ -237,11 +241,12 @@ GET  /models/status                   # AI model status
 
 ## 📊 **Performance Metrics**
 
-- **Face Recognition Accuracy**: 95%+ under good lighting
-- **Processing Speed**: 2-5 seconds per classroom photo
-- **Supported Image Formats**: JPG, PNG, GIF (up to 5MB)
-- **Concurrent Users**: 100+ simultaneous users
-- **Database**: Optimized queries with indexing
+- **Face Recognition Accuracy**: 95%+ under good lighting conditions
+- **Processing Speed**: 2-5 seconds per classroom photo (depends on number of students)
+- **Supported Image Formats**: JPG, PNG, JPEG (up to 5MB)
+- **Concurrent Users**: 100+ simultaneous users supported
+- **Database**: MongoDB with optimized queries and indexing
+- **Embedding Dimension**: 128-d face vectors using FaceNet
 - **Scalability**: Microservice architecture for horizontal scaling
 
 ---
@@ -292,6 +297,25 @@ cd ai_service && pytest
 
 ---
 
+## 🆕 **Recent Updates (v1.5 - November 2025)**
+
+### **Critical Bug Fixes**
+- ✅ Fixed token authentication bug (accessToken vs token) across all components
+- ✅ Resolved "My Classes" glitching issue with centralized state management
+- ✅ Fixed date/time formatting to DD/MM/YYYY and 24-hour format
+- ✅ Fixed attendance board statistics calculation (case-insensitive status matching)
+- ✅ Fixed manual attendance marking with proper status capitalization
+- ✅ Corrected AI service to use 128-d embeddings (was incorrectly using 512-d)
+
+### **New Features**
+- ✅ Added centralized date/time formatting utilities
+- ✅ Improved student portal components (StudentClassView, StudentAttendanceView, StudentProfile)
+- ✅ Enhanced error handling and loading states
+- ✅ Removed demo credentials for better security
+- ✅ Added React.memo optimization to prevent unnecessary re-renders
+
+---
+
 ## 📈 **Roadmap**
 
 ### **Version 2.0 (Q1 2026)**
@@ -300,13 +324,15 @@ cd ai_service && pytest
 - [ ] Multi-institution support
 - [ ] Real-time notifications
 - [ ] Calendar integration
+- [ ] Bulk student import/export
 
 ### **Version 3.0 (Q2 2026)**
 - [ ] Emotion recognition
 - [ ] Attention tracking
 - [ ] Behavior analysis
-- [ ] Advanced reporting
+- [ ] Advanced reporting with charts
 - [ ] API marketplace
+- [ ] Multiple face model support
 
 ---
 
